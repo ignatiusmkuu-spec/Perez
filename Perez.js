@@ -20,7 +20,7 @@ const BASE_URL = 'https://noobs-api.top';
 const ytdl = require("ytdl-core");
 const { getSettings, updateSetting } = require('./database/config');
 const fetchSettings = require('./database/fetchSettings');
-const Client = new Genius.Client("jKTbbU-6X2B9yWWl-KOm7Mh3_Z6hQsgE4mmvwV3P3Qe7oNa9-hsrLxQV5l5FiAZO"); // Scrapes if no key is provided
+const Client = new Genius.Client(process.env.GENIUS_API_KEY); // Scrapes if no key is provided
 const { fetchUrl, isUrl, processTime } = require("./lib/dreadfunc");
 const { TelegraPh, UploadFileUgu, webp2mp4File, floNime } = require('./lib/dreadupload');
 const { Configuration, OpenAI } = require("openai");
@@ -67,7 +67,7 @@ const Heroku = require("heroku-client");
 const appname = process.env.APP_NAME || '';
 const herokuapi = process.env.HEROKU_API;
 const cmd = body.startsWith(prefix);
-const botname = process.env.BOTNAME || '𝑵𝑬𝑿𝑼𝑺 𝑴𝑫';
+const botname = process.env.BOTNAME || 'Tesla MD';
   
     const command = body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase();
     const args = body.trim().split(/ +/).slice(1);
@@ -99,7 +99,7 @@ const botname = process.env.BOTNAME || '𝑵𝑬𝑿𝑼𝑺 𝑴𝑫';
 const mime = (quoted.msg || quoted).mimetype || "";
 const qmsg = (quoted.msg || quoted);
 const author = process.env.STICKER_AUTHOR ||'𝗕𝗢𝗧';
-const packname = process.env.STICKER_PACKNAME || '𝗡𝗘𝗫𝗨𝗦-𝗠𝗗';
+const packname = process.env.STICKER_PACKNAME || 'Tesla MD';
 const dev = process.env.DEV || '254781346242';
 const menu = process.env.MENU_TYPE || 'VIDEO';
 const DevDreaded = dev.split(",");
@@ -643,7 +643,7 @@ let cap = `HI 😁🌄, ${getGreeting()}\n\n💫✦━━━━━━━━━�
 
 🌙〘ＧＥＮＥＲＡＬ〙🌙
 ╭═══⋆★⋆═══╮
-┃ 🌠 Owner ⟡ Nexus  
+┃ 🌠 Owner ⟡ Tesla MD  
 ┃ 🌠 Script ⟡ Menu  
 ┃ 🌠 List ⟡ Ping ⟡ Poll  
 ┃ 🌠 Alive ⟡ Speed  
@@ -707,9 +707,9 @@ client.sendMessage(m.chat, {
                         contextInfo: {
                             externalAdReply: {
                                 showAdAttribution: true,
-                                title: `𝗡𝗘𝗫𝗨𝗦-𝗠𝗗`,
+                                title: botname,
                                 body: `${runtime(process.uptime())}`,
-                                thumbnail: fs.readFileSync('./Perez.jpg'),
+                                thumbnail: fs.existsSync('./Tesla.jpg') ? fs.readFileSync('./Tesla.jpg') : undefined,
                                 sourceUrl: 'https://wa.me/254781346242?text=Hello👋+perez+Nihostie+Bot+Mkuu+😔',
                                 mediaType: 1,
                                 renderLargerThumbnail: true
@@ -1809,7 +1809,7 @@ m.reply("*Wait a moment...*");
       return m.reply("𝗤𝘂𝗼𝘁𝗲 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝘄𝗶𝘁𝗵 𝘁𝗵𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵!");
     }
     if (!text) {
-      return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝘀𝗼𝗺𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵! 𝗧𝗵𝗶𝘀 𝗶𝘀 PEREZ 𝗔𝗶, 𝘂𝘀𝗶𝗻𝗴 𝗴𝗲𝗺𝗶𝗻𝗶-𝗽𝗿𝗼-𝘃𝗶𝘀𝗶𝗼𝗻 𝘁𝗼 𝗮𝗻𝗮𝗹𝘆𝘀𝗲 𝗶𝗺𝗮𝗴𝗲𝘀.");
+      return m.reply(`𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝘀𝗼𝗺𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵! 𝗧𝗵𝗶𝘀 𝗶𝘀 ${botname} 𝗔𝗶, 𝘂𝘀𝗶𝗻𝗴 𝗴𝗲𝗺𝗶𝗻𝗶-𝗽𝗿𝗼-𝘃𝗶𝘀𝗶𝗼𝗻 𝘁𝗼 𝗮𝗻𝗮𝗹𝘆𝘀𝗲 𝗶𝗺𝗮𝗴𝗲𝘀.`);
     }
     if (!/image/.test(mime)) {
       return m.reply("𝗛𝘂𝗵 𝘁𝗵𝗶𝘀 𝗶𝘀 𝗻𝗼𝘁 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲! 𝗣𝗹𝗲𝗮𝘀𝗲 𝗧𝗮𝗴 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝘄𝗶𝘁𝗵 𝘁𝗵𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵 !");
@@ -2137,7 +2137,7 @@ case "faker": {
       if (_0x2f8982.length == 0) {
         return m.reply("𝙽𝚘 𝚏𝚊𝚔𝚎 𝙰𝚌𝚌𝚘𝚞𝚗𝚝𝚜 𝚍𝚎𝚝𝚎𝚌𝚝𝚎𝚍.");
       }
-      let _0x2d7d67 = `Nexus 𝚑𝚊𝚜 𝚍𝚎𝚝𝚎𝚌𝚝𝚎𝚍 𝚝𝚑𝚎 𝚏𝚘𝚕𝚕𝚘𝚠𝚒𝚗𝚐 ${_0x2f8982.length} 𝙵𝚊𝚔𝚎 𝚊𝚌𝚌𝚘𝚞𝚗𝚝𝚜 𝚒𝚗 𝚝𝚑𝚒𝚜 𝚐𝚛𝚘𝚞𝚙:- \n`;
+      let _0x2d7d67 = `${botname} 𝚑𝚊𝚜 𝚍𝚎𝚝𝚎𝚌𝚝𝚎𝚍 𝚝𝚑𝚎 𝚏𝚘𝚕𝚕𝚘𝚠𝚒𝚗𝚐 ${_0x2f8982.length} 𝙵𝚊𝚔𝚎 𝚊𝚌𝚌𝚘𝚞𝚗𝚝𝚜 𝚒𝚗 𝚝𝚑𝚒𝚜 𝚐𝚛𝚘𝚞𝚙:- \n`;
       for (let _0x28761c of _0x2f8982) {
         _0x2d7d67 += `🚮 @${_0x28761c.split("@")[0]}\n`;
       }
@@ -3659,7 +3659,7 @@ case "update": case "redeploy": {
                     }
                 );
 
-                await m.reply("Your bot is undergoing a ruthless upgrade, hold tight for the next 2 minutes as the redeploy executes! Once done, you’ll have the freshest version of *PEREZ-BOT* unleashed upon you.");
+                await m.reply(`Your bot is restarting. Once it is back, you’ll be using the latest version of *${botname}*.`);
                 console.log("Build details:", response.data);
             } catch (error) {
                 const errorMessage = error.response?.data || error.message;
@@ -3921,7 +3921,7 @@ break;
           case "leave": { 
                  if (!Owner) throw NotOwner;
 		 if (!m.isGroup) throw group;
- await client.sendMessage(m.chat, { text : '𝗚𝗼𝗼𝗱𝗯𝘆𝗲 𝗲𝘃𝗲𝗿𝘆𝗼𝗻𝗲👋. PEREZ-𝗔𝗶 𝗶𝘀 𝗟𝗲𝗮𝘃𝗶𝗻𝗴 𝘁𝗵𝗲 𝗚𝗿𝗼𝘂𝗽 𝗻𝗼𝘄...' , mentions: participants.map(a => a.id)}, { quoted : m }); 
+ await client.sendMessage(m.chat, { text : `𝗚𝗼𝗼𝗱𝗯𝘆𝗲 𝗲𝘃𝗲𝗿𝘆𝗼𝗻𝗲👋. ${botname} 𝗔𝗶 𝗶𝘀 𝗟𝗲𝗮𝘃𝗶𝗻𝗴 𝘁𝗵𝗲 𝗚𝗿𝗼𝘂𝗽 𝗻𝗼𝘄...` , mentions: participants.map(a => a.id)}, { quoted : m }); 
                  await client.groupLeave(m.chat); 
   
              } 
@@ -4039,13 +4039,13 @@ if (!m.quoted) return m.reply("quote a viewonce message eh")
     if (quotedMessage.imageMessage) {
       let imageCaption = quotedMessage.imageMessage.caption;
       let imageUrl = await client.downloadAndSaveMediaMessage(quotedMessage.imageMessage);
-      client.sendMessage(m.chat, { image: { url: imageUrl }, caption: `Retrieved by Perez-Md!\n${imageCaption}`}, { quoted: m });
+      client.sendMessage(m.chat, { image: { url: imageUrl }, caption: `Retrieved by ${botname}!\n${imageCaption}`}, { quoted: m });
     }
 
     if (quotedMessage.videoMessage) {
       let videoCaption = quotedMessage.videoMessage.caption;
       let videoUrl = await client.downloadAndSaveMediaMessage(quotedMessage.videoMessage);
-      client.sendMessage(m.chat, { video: { url: videoUrl }, caption: `Retrieved by Perez-Md!\n${videoCaption}`}, { quoted: m });
+      client.sendMessage(m.chat, { video: { url: videoUrl }, caption: `Retrieved by ${botname}!\n${videoCaption}`}, { quoted: m });
     }
 
       }
@@ -4597,7 +4597,7 @@ case "movie":
              } 
  break;
  
-      case "perez-md": case "owner": 
+      case "tesla-md": case "perez-md": case "owner": 
 		      const daddy = [ 'https://files.catbox.moe/yif0t1.mp4',
                                 'https://files.catbox.moe/o93jo6.mp4'
 				               ];

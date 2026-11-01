@@ -1,6 +1,6 @@
 const sessionName = 'session';
 const session = process.env.SESSION || '';
-const botname = process.env.BOTNAME || '𝙋𝙀𝙍𝙀𝙕-𝙈𝘿';
+const botname = process.env.BOTNAME || 'Tesla MD';
 const port = process.env.PORT || 8000;
 
 const {
@@ -75,35 +75,12 @@ try {
   return;
 }
   
-// Minimal detect command - Add to your message event
-client.on('message', async (message) => {
-    if (message.body.startsWith('!detect')) {
-        const args = message.body.split(' ');
-        
-        // Get mentioned user or phone
-        let contact;
-        if (message.mentionedIds?.length > 0) {
-            contact = await client.getContactById(message.mentionedIds[0]);
-        } else if (args[1]?.match(/^\d+$/)) {
-            const chatId = args[1].includes('@') ? args[1] : `${args[1]}@c.us`;
-            contact = await client.getContactById(chatId);
-        }
-        
-        if (contact) {
-            await message.reply(
-                `🔍 User Found:\n` +
-                `Number: ${contact.number}\n` +
-                `Name: ${contact.name || 'N/A'}`
-            );
-        }
-    }
-});  
   const { state, saveCreds } = await useMultiFileAuthState('session');
   const { version, isLatest } = await fetchLatestBaileysVersion();
   console.log(`using WA v${version.join(".")}, isLatest: ${isLatest}`);
   console.log(
     color(
-      figlet.textSync("PEREZ-MD", {
+      figlet.textSync(botname, {
         font: "Standard",
         horizontalLayout: "default",
         vertivalLayout: "default",
@@ -117,7 +94,7 @@ client.on('message', async (message) => {
     version,
     logger: pino({ level: "silent" }),
     printQRInTerminal: false,
-    browser: ["PEREZ", "Safari", "5.1.7"],
+    browser: [botname, "Safari", "5.1.7"],
     auth: state,
 syncFullHistory: true,
   });
@@ -894,11 +871,10 @@ client.ev.on("group-participants.update", async (m) => {
 } catch (err) {
   console.error("❌ Failed to initialize database:", err.message || err);
       }
-      await client.groupAcceptInvite('DefN96lXQ4i5iO1wDDeu2C');
-      console.log(color("Congrats, 𝙽𝙴𝚇𝚄𝚂-𝙼𝙳 has successfully connected to this server", "green"));
+      console.log(color(`Congrats, ${botname} has successfully connected to this server`, "green"));
       console.log(color("Follow me on github as Ignatiusperez", "red"));
       console.log(color("Text the bot number with menu to check my command list"));
-      client.sendMessage(client.user.id, { text: `Successfully connected » To »【NEXUS-MD】` });
+      client.sendMessage(client.user.id, { text: `Successfully connected » To »【${botname}】` });
     }
     // console.log('Connected...', update)
   });
@@ -1045,8 +1021,8 @@ client.sendFile = async(jid, PATH, fileName, quoted = {}, options = {}) => {
 }
 
 app.use(express.static("perez"));
-app.get("/", (req, res) => res.sendFile(__dirname + "/index.html"));
-app.listen(port, () => console.log(`📡 Connected on port http://localhost:${port}`));
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "perez", "index.html")));
+app.listen(port, "0.0.0.0", () => console.log(`📡 Connected on port ${port}`));
 
 startperez();
 
