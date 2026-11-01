@@ -3,16 +3,6 @@ const session = process.env.SESSION || '';
 const botname = process.env.BOTNAME || 'Tesla MD';
 const port = process.env.PORT || 8000;
 
-const {
-  default: perezConnect,
-  useMultiFileAuthState,
-  DisconnectReason,
-  fetchLatestBaileysVersion,
-  downloadContentFromMessage,
-  jidDecode,
-  proto,
-  getContentType,
-         } = require("@whiskeysockets/baileys");
 const pino = require("pino");
 const { Boom } = require("@hapi/boom");
 const fs = require("fs");
@@ -59,6 +49,16 @@ async function authenticationn() {
 authenticationn();
 
 async function startperez() {
+  const {
+    default: perezConnect,
+    useMultiFileAuthState,
+    DisconnectReason,
+    fetchLatestBaileysVersion,
+    downloadContentFromMessage,
+    jidDecode,
+    proto,
+    getContentType,
+  } = await import("@whiskeysockets/baileys");
 
   let autobio, autolike, welcome, autoview, mode, prefix, anticall;
 
@@ -120,7 +120,7 @@ if (autobio === 'on'){
     //console.log(JSON.stringify(chatUpdate, undefined, 2))
     try {
 
-      mek = chatUpdate.messages[0];
+      const mek = chatUpdate.messages[0];
       if (!mek.message) return;
       mek.message = Object.keys(mek.message)[0] === "ephemeralMessage" ? mek.message.ephemeralMessage.message : mek.message;
 
@@ -139,7 +139,7 @@ await client.sendMessage(mek.key.remoteJid, { react: { key: mek.key, text: '🧚
    
       if (!client.public && !mek.key.fromMe && chatUpdate.type === "notify") return;
       
-      m = smsg(client, mek, store);
+      const m = smsg(client, mek, store);
       
   const Perez = require("./Perez.js");
 Perez(client, m, chatUpdate, store);
@@ -1014,7 +1014,7 @@ client.sendFile = async(jid, PATH, fileName, quoted = {}, options = {}) => {
     copy.key.remoteJid = jid;
     copy.key.fromMe = sender === client.user.id;
 
-    return proto.WebMessageInfo.fromObject(copy);
+    return proto.WebMessageInfo.create(copy);
   };
 
   return client;
