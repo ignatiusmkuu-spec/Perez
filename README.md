@@ -54,19 +54,17 @@ Our AI features use random APIs to run, so sometimes they may be down.
 
 
 
-###  ` Deploy to Heroku`
-<p align="center">
-     <a href="https://verification-lemon.vercel.app/">
-       <img src="https://www.herokucdn.com/deploy/button.svg" alt="Deploy to Heroku"/>
-     </a>
- </p>
+### Deploy to Heroku
 
- 
+1. Create a Heroku app and add the Heroku Node.js buildpack and PostgreSQL add-on.
+2. Set these Config Vars in the Heroku dashboard:
+   - `SESSION`: base64-encoded WhatsApp credentials JSON. Treat this as a password.
+   - `DEV`: owner phone numbers, separated by commas, without `+` signs or spaces.
+   - `APP_NAME`: the Heroku app name used by the bot's management commands.
+3. Deploy the project. The `Procfile` starts the web process, and `DATABASE_URL` is supplied by Heroku Postgres.
+4. Check `/healthz` after startup. It reports whether the process is connected to WhatsApp.
 
-    
-
-- Fill in the required variables into your hosting site for bot to work.
- </h2>
+Run `npm test` before deploying. Never commit WhatsApp credentials or paste `SESSION` into chat or source files.
      
 
     

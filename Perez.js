@@ -1,7 +1,6 @@
 // clone at your own risk
 
 
-const { BufferJSON, WA_DEFAULT_EPHEMERAL, generateWAMessageFromContent, proto, generateWAMessageContent, generateWAMessage, prepareWAMessageMedia, areJidsSameUser, getContentType } = require("@whiskeysockets/baileys");
 const fs = require("fs");
 const path = require("path");
 const util = require("util");
@@ -27,7 +26,7 @@ const { Configuration, OpenAI } = require("openai");
 let setting = process.env.AI;
 const { smsg, formatp, tanggal, formatDate, getTime,  sleep, generateProfilePicture, clockString, fetchJson, getBuffer, jsonformat, format, parseMention, getRandom } = require('./lib/dreadfunc');
 const { exec, spawn, execSync } = require("child_process");
-module.exports = Perez = async (client, m, chatUpdate, store) => {
+module.exports = async function Perez(client, m, chatUpdate, store) {
   try {
 	  const {
   wapresence,
@@ -67,7 +66,7 @@ const Heroku = require("heroku-client");
 const appname = process.env.APP_NAME || '';
 const herokuapi = process.env.HEROKU_API;
 const cmd = body.startsWith(prefix);
-const botname = process.env.BOTNAME || 'Tesla MD';
+const botname = "Tesla MD";
   
     const command = body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase();
     const args = body.trim().split(/ +/).slice(1);
@@ -112,13 +111,13 @@ const badwords = bad.split(",")
     const groupName = m.isGroup && groupMetadata ? await groupMetadata.subject : "";  
     const participants = m.isGroup && groupMetadata
   ? groupMetadata.participants
-      .filter(p => p.pn)
-      .map(p => p.pn)
+      .filter(p => p.id)
+      .map(p => p.id)
   : [];
     const groupAdmin = m.isGroup
   ? groupMetadata.participants
-      .filter(p => p.admin && p.pn)
-      .map(p => p.pn)
+      .filter(p => p.admin && p.id)
+      .map(p => p.id)
   : [];
     const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumber) : false; 
 	const groupSender = m.isGroup && groupMetadata
@@ -126,7 +125,7 @@ const badwords = bad.split(",")
       const found = groupMetadata.participants.find(p => 
         p.id === sender || client.decodeJid(p.id) === client.decodeJid(sender)
       );
-      return found?.pn || sender;
+      return found?.id || sender;
     })()
   : sender;
      const isAdmin = m.isGroup ? groupAdmin.includes(groupSender) : false;
@@ -2594,7 +2593,6 @@ const axios = require("axios");
 }
    break;
 		      case "fullpp": {
-		      const { S_WHATSAPP_NET } = require('@whiskeysockets/baileys');
 		      try {
 const fs = require("fs");
 
@@ -2627,7 +2625,7 @@ client.query({
                 tag: 'iq',
                 attrs: {
                     target: undefined,
-                    to: S_WHATSAPP_NET,
+                    to: 's.whatsapp.net',
                     type:'set',
                     xmlns: 'w:profile:picture'
                 },
@@ -2770,7 +2768,7 @@ if (!text) throw 'Provide a valid Bot Baileys Function to evaluate'
  
           break;
 		      case "add": {
-		      const { getBinaryNodeChild, getBinaryNodeChildren } = require('@whiskeysockets/baileys');
+		      const { getBinaryNodeChild, getBinaryNodeChildren } = await import('@whiskeysockets/baileys');
         if (!isBotAdmin) throw botAdmin;
 	if (!isAdmin) throw admin;
 	if (!m.isGroup) throw group;
@@ -2787,7 +2785,7 @@ if (!text) throw 'Provide a valid Bot Baileys Function to evaluate'
                     v,
                     await client.onWhatsApp(v + '@s.whatsapp.net'),
                 ]),
-        )).filter((v) => v[1][0]?.exists).map((v) => v[0] + '@c.us');
+        )).filter((v) => v[1][0]?.exists).map((v) => v[0] + '@s.whatsapp.net');
 
         const response = await client.query({
             tag: 'iq',

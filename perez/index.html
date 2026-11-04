@@ -50,7 +50,7 @@
                 <div class="card">
                     <div class="card-header">Notification</div>
                     <div class="card-body">
-                        <span>Hi User👋, you have successfully connected to Tesla MD. The bot is currently active and running.</span>
+                        <span id="bot-status" role="status" aria-live="polite">Checking the bot connection…</span>
                     </div>
                 </div>
             </div>
@@ -75,6 +75,31 @@
             </div>
     </div>
 
+    <script>
+        async function updateBotStatus() {
+            const statusElement = document.getElementById("bot-status");
+            const messages = {
+                starting: "The bot is starting…",
+                connecting: "Connecting to WhatsApp…",
+                awaiting_auth: "WhatsApp needs a fresh session. Set SESSION in Heroku config vars.",
+                connected: "Tesla MD is connected and running.",
+                disabled: "The bot is disabled in this preview.",
+                reconnecting: "The bot is reconnecting to WhatsApp…",
+                failed: "The bot could not start. Check the service logs."
+            };
+
+            try {
+                const response = await fetch("/healthz", { cache: "no-store" });
+                const result = await response.json();
+                statusElement.textContent = messages[result.status] || `Bot status: ${result.status}.`;
+            } catch {
+                statusElement.textContent = "Unable to check the bot connection.";
+            }
+        }
+
+        updateBotStatus();
+        setInterval(updateBotStatus, 10000);
+    </script>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>

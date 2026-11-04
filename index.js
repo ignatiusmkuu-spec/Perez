@@ -1,7 +1,12 @@
 const sessionName = 'session';
 const session = process.env.SESSION || '';
-const botname = process.env.BOTNAME || 'Tesla MD';
-const port = process.env.PORT || 8000;
+const botname = "Tesla MD";
+const port = process.env.PORT || 5000;
+let botStatus = 'starting';
+let sessionInitialized = false;
+let databaseInitialized = false;
+let reconnectTimer = null;
+let reconnectAttempts = 0;
 
 const pino = require("pino");
 const { Boom } = require("@hapi/boom");
@@ -33,22 +38,53 @@ const color = (text, color) => {
 };
 
 async function authenticationn() {
-  try {
-    if (!fs.existsSync("./session/creds.json")) {
-      console.log('Connecting...');
-      await fs.writeFileSync("./session/creds.json", atob(session), "utf8");
-    } else if (session !== "zokk") {
-      await fs.writeFileSync("./session/creds.json", atob(session), "utf8");
-    }
-  } catch (_0xf348d3) {
-    console.log("Session is invalid: " + _0xf348d3);
+  const credsPath = path.join(__dirname, sessionName, "creds.json");
+  const useEnvSession = process.env.NODE_ENV === "production" || session.length > 0;
+
+  if (sessionInitialized) return;
+  if (session === "zokk" && process.env.NODE_ENV !== "production" && fs.existsSync(credsPath)) {
+    sessionInitialized = true;
     return;
+  }
+  if (!session && useEnvSession) {
+    throw new Error("SESSION must be set to a base64-encoded WhatsApp credentials file.");
+  }
+  if (!session) {
+    if (fs.existsSync(credsPath)) {
+      sessionInitialized = true;
+      return;
+    }
+    throw new Error("No WhatsApp session found. Set SESSION before starting the bot.");
+  }
+
+  try {
+    const creds = Buffer.from(session, "base64").toString("utf8");
+    JSON.parse(creds);
+    fs.mkdirSync(path.dirname(credsPath), { recursive: true });
+    fs.writeFileSync(credsPath, creds, { encoding: "utf8", mode: 0o600 });
+    sessionInitialized = true;
+  } catch {
+    throw new Error("SESSION is invalid. It must contain base64-encoded JSON credentials.");
   }
 }
 
-authenticationn();
+function scheduleReconnect(reason) {
+  if (reconnectTimer) return;
+  const delay = Math.min(1_000 * 2 ** reconnectAttempts, 30_000);
+  reconnectAttempts = Math.min(reconnectAttempts + 1, 5);
+  console.warn(`WhatsApp connection closed (${reason}); retrying in ${delay}ms.`);
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    startperez().catch((error) => {
+      botStatus = "failed";
+      console.error("WhatsApp reconnect failed:", error.message || error);
+    });
+  }, delay);
+}
 
 async function startperez() {
+  await authenticationn();
+
   const {
     default: perezConnect,
     useMultiFileAuthState,
@@ -57,8 +93,12 @@ async function startperez() {
     downloadContentFromMessage,
     jidDecode,
     proto,
-    getContentType,
   } = await import("@whiskeysockets/baileys");
+
+  if (!databaseInitialized) {
+    await initializeDatabase();
+    databaseInitialized = true;
+  }
 
   let autobio, autolike, welcome, autoview, mode, prefix, anticall;
 
@@ -120,6 +160,7 @@ if (autobio === 'on'){
     //console.log(JSON.stringify(chatUpdate, undefined, 2))
     try {
 
+      if (!chatUpdate.messages?.length) return;
       const mek = chatUpdate.messages[0];
       if (!mek.message) return;
       mek.message = Object.keys(mek.message)[0] === "ephemeralMessage" ? mek.message.ephemeralMessage.message : mek.message;
@@ -835,46 +876,35 @@ client.ev.on("group-participants.update", async (m) => {
 
   client.serializeM = (m) => smsg(client, m, store);
   client.ev.on("connection.update", async (update) => {
-    const { connection, lastDisconnect } = update;
+    const { connection, lastDisconnect, qr } = update;
+    if (qr) {
+      botStatus = "awaiting_auth";
+      console.warn("WhatsApp authentication is required; QR data is intentionally not logged.");
+    }
+    if (connection === "connecting") botStatus = "connecting";
     if (connection === "close") {
+      botStatus = "reconnecting";
       let reason = new Boom(lastDisconnect?.error)?.output.statusCode;
-      if (reason === DisconnectReason.badSession) {
-        console.log(`Bad Session File, Please Delete Session and Scan Again`);
-        process.exit();
-      } else if (reason === DisconnectReason.connectionClosed) {
-        console.log("Connection closed, reconnecting....");
-        startperez();
-      } else if (reason === DisconnectReason.connectionLost) {
-        console.log("Connection Lost from Server, reconnecting...");
-        startperez();
-      } else if (reason === DisconnectReason.connectionReplaced) {
-        console.log("Connection Replaced, Another New Session Opened, Please Restart Bot");
-        process.exit();
-      } else if (reason === DisconnectReason.loggedOut) {
-        console.log(`Device Logged Out, Please Delete File creds.json and Scan Again.`);
-        process.exit();
-      } else if (reason === DisconnectReason.restartRequired) {
-        console.log("Restart Required, Restarting...");
-        startperez();
-      } else if (reason === DisconnectReason.timedOut) {
-        console.log("Connection TimedOut, Reconnecting...");
-        startperez();
+      if (
+        reason === DisconnectReason.badSession ||
+        reason === DisconnectReason.connectionReplaced ||
+        reason === DisconnectReason.loggedOut
+      ) {
+        botStatus = "failed";
+        console.error(`WhatsApp session needs attention (disconnect reason ${reason}).`);
       } else {
-        console.log(`Unknown DisconnectReason: ${reason}|${connection}`);
-        startperez();
+        scheduleReconnect(reason ?? "unknown");
       }
     } else if (connection === "open") {  
+      botStatus = "connected";
+      reconnectAttempts = 0;
       
-    try {
-  await initializeDatabase();
-  console.log("✅ PostgreSQL database initialized successfully.");
-} catch (err) {
-  console.error("❌ Failed to initialize database:", err.message || err);
-      }
       console.log(color(`Congrats, ${botname} has successfully connected to this server`, "green"));
       console.log(color("Follow me on github as Ignatiusperez", "red"));
       console.log(color("Text the bot number with menu to check my command list"));
-      client.sendMessage(client.user.id, { text: `Successfully connected » To »【${botname}】` });
+      client
+        .sendMessage(client.user.id, { text: `Successfully connected » To »【${botname}】` })
+        .catch((error) => console.error("Could not send the startup notice:", error.message || error));
     }
     // console.log('Connected...', update)
   });
@@ -1020,16 +1050,23 @@ client.sendFile = async(jid, PATH, fileName, quoted = {}, options = {}) => {
   return client;
 }
 
-app.use(express.static("perez"));
+app.use(express.static(path.join(__dirname, "perez")));
+app.get("/favicon.ico", (_req, res) => res.sendStatus(204));
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "perez", "index.html")));
+app.get("/healthz", (_req, res) => {
+  res.status(200).json({
+    status: botStatus,
+    connected: botStatus === "connected",
+  });
+});
 app.listen(port, "0.0.0.0", () => console.log(`📡 Connected on port ${port}`));
 
-startperez();
-
-let file = require.resolve(__filename);
-fs.watchFile(file, () => {
-  fs.unwatchFile(file);
-  console.log(chalk.redBright(`Update ${__filename}`));
-  delete require.cache[file];
-  require(file);
-});
+if (process.env.BOT_ENABLED === "false") {
+  botStatus = "disabled";
+  console.log("WhatsApp bot startup disabled by BOT_ENABLED=false.");
+} else {
+  startperez().catch((error) => {
+    botStatus = "failed";
+    console.error("WhatsApp bot failed to start:", error.message || error);
+  });
+}

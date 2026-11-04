@@ -48,7 +48,8 @@ async function initializeDatabase() {
 
     console.log("✅ Database initialized.");
   } catch (err) {
-    console.error("❌ Initialization error:", err);
+    console.error("❌ Database initialization failed:", err.message || err);
+    throw err;
   } finally {
     client.release();
   }
@@ -72,8 +73,8 @@ async function getSettings() {
     return settings;
 
   } catch (err) {
-    console.error("❌ Failed to fetch settings:", err);
-    return defaultSettings;
+    console.error("❌ Failed to fetch settings:", err.message || err);
+    throw err;
 
   } finally {
     client.release();

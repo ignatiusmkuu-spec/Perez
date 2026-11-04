@@ -34,7 +34,7 @@
       "required": true
 },
   "SESSION": {
-      "description": "Paste your session_id you received after linking here , it's used for authentication, A must!!",
+      "description": "Required base64-encoded WhatsApp credentials JSON. Keep it private.",
       "required": true
     },
  
