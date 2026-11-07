@@ -57,27 +57,27 @@ function commandsByCategory() {
 function buildMenu({ botname, greeting, pushname, prefix, uptime }) {
   const byCategory = commandsByCategory();
   const total = Object.values(byCategory).reduce((sum, names) => sum + names.length, 0);
-  const line = '━━━━━━━━━━━━━━━━━━━━';
+  const line = '━━━━━━━━━━━━━━━━━━━';
 
   let menu = `${greeting}\n\n`;
   menu += `╭${line}╮\n`;
-  menu += `┃  ✨ ${toBold(botname)} ✨\n`;
+  menu += `┃    ${toBold(botname)} \n`;
   menu += `┃  ${toBoldItalic('A bot beyond the stars')}\n`;
   menu += `╰${line}╯\n\n`;
 
-  menu += `┏━━『 🛰 ${toBold('SYSTEM')} 』\n`;
-  menu += `┃ 👤 ${toBold('User')}  ⟫  ${pushname}\n`;
-  menu += `┃ 🔑 ${toBold('Prefix')}  ⟫  [ ${prefix} ]\n`;
-  menu += `┃ ⏱ ${toBold('Uptime')}  ⟫  ${uptime}\n`;
-  menu += `┃ 📦 ${toBold('Commands')}  ⟫  ${total}\n`;
+  menu += `┏━━━━━━━━━━━━━━━◇\n`;
+  menu += `┃ ▪︎▪︎▪︎ ${toBold('User')}  ⟫  ${pushname}\n`;
+  menu += `┃ ▪︎▪︎▪︎ ${toBold('Prefix')}  ⟫  [ ${prefix} ]\n`;
+  menu += `┃ ▪︎▪︎▪︎ ${toBold('Uptime')}  ⟫  ${uptime}\n`;
+  menu += `┃ ▪︎▪︎▪︎ ${toBold('Commands')}  ⟫  ${total}\n`;
   menu += `┗━━━━━━━━━━━━━━━━◈\n\n`;
 
   for (const [category, names] of Object.entries(byCategory)) {
-    const icon = CATEGORY_ICONS[category] || '📌';
-    const symbol = CATEGORY_SYMBOLS[category] || '✠';
-    menu += `╭─❮ ${icon} ${toBoldItalic(category.toUpperCase())} ❯─⟦ ${names.length} ⟧\n`;
+    const icon = CATEGORY_ICONS[category] || '🧭';
+    const symbol = CATEGORY_SYMBOLS[category] || '□';
+    menu += `╭━━━━━━━━━━━ ${icon} ${toBold(category.toUpperCase())}\n`;
     for (const name of names) menu += `│ ${symbol} ${formatCmd(name)}\n`;
-    menu += `╰─────────────────◈\n\n`;
+    menu += `╰────────────────◈\n\n`;
   }
 
   menu += `${line}\n`;
