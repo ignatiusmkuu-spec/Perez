@@ -1,0 +1,764 @@
+// Downloads commands.
+// Commands: apk, facebook, gitclone, instagram, pinterest, play, play2, song, song2, tiktok, twitter, video, ytmp3, ytmp4, ytsearch
+const axios = require('axios');
+const yts = require('yt-search');
+const { fetchJson } = require('../lib/dreadfunc');
+const BASE_URL = 'https://noobs-api.top';
+
+module.exports = [
+  // apk (original Perez.js lines 4386-4410)
+  {
+    command: ['apk'],
+    aliases: ['app'],
+    description: 'Download an Android app',
+    category: 'downloads',
+    handler: async (client, m, { reply, text }) => {
+    {
+              if (!text) return reply("Where is the app name?");
+            let kyuu = await fetchJson (`https://api.bk9.dev/search/apk?q=${text}`);
+            let tylor = await fetchJson (`https://api.bk9.dev/download/apk?id=${kyuu.BK9[0].id}`);
+             await client.sendMessage(
+                  m.chat,
+                  {
+                    document: { url: tylor.BK9.dllink },
+                    fileName: tylor.BK9.name,
+                    mimetype: "application/vnd.android.package-archive",
+                    contextInfo: {
+            externalAdReply: {
+              title: `𝗡𝗘𝗫𝗨𝗦-𝗠𝗗`,
+              body: `${tylor.BK9.name}`,
+              thumbnailUrl: `${tylor.BK9.icon}`,
+              sourceUrl: `${tylor.BK9.dllink}`,
+              mediaType: 2,
+              showAdAttribution: true,
+              renderLargerThumbnail: false
+            }
+          }
+        }, { quoted: m });
+              }
+    },
+  },
+
+  // facebook (original Perez.js lines 3300-3341)
+  {
+    command: ['facebook'],
+    aliases: ['fb', 'fbdl'],
+    description: 'Download a Facebook video',
+    category: 'downloads',
+    handler: async (client, m, { text }) => {
+    {
+    if (!text) {
+            return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝗳𝗮𝗰𝗲𝗯𝗼𝗼𝗸 𝗹𝗶𝗻𝗸 !");
+        }
+
+        if (!text.includes("facebook.com")) {
+            return m.reply("That is not a facebook link.");
+        }
+
+        try {
+                    let data = await fetchJson(`https://api.dreaded.site/api/facebook?url=${text}`);
+
+            if (!data || data.status !== 200 || !data.facebook || !data.facebook.sdVideo) {
+                return m.reply("𝗦𝗼𝗿𝗿𝘆 𝘁𝗵𝗲 𝗔𝗣𝗜 𝗱𝗶𝗱𝗻'𝘁 𝗿𝗲𝘀𝗽𝗼𝗻𝗱 𝗰𝗼𝗿𝗿𝗲𝗰𝘁𝗹𝘆. 𝗣𝗹𝗲𝗮𝘀𝗲 𝘁𝗿𝘆 𝗔𝗴𝗮𝗶𝗻 𝗹𝗮𝘁𝗲𝗿!");
+            }
+
+            const fbvid = data.facebook.sdVideo;
+
+            if (!fbvid) {
+                return m.reply("Wrong facebook data. Please ensure the video exists.");
+            }
+
+            await client.sendMessage(
+                m.chat,
+                {
+                    video: { url: fbvid },
+                    caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗡𝗘𝗫𝗨𝗦-𝗠𝗗",
+                    gifPlayback: false,
+                },
+                { quoted: m }
+            );
+        } catch (e) {
+            console.error("Error occurred:", e);
+            m.reply("An error occurred. API might be down. Error: " + e.message);
+        }
+    }
+    },
+  },
+
+  // gitclone (original Perez.js lines 2310-2321)
+  {
+    command: ['gitclone'],
+    aliases: [],
+    description: 'Download a GitHub repository as a zip',
+    category: 'downloads',
+    handler: async (client, m, { text }) => {
+    {
+    		      if (!text) return m.reply(`Where is the link?`)
+    if (!text.includes('github.com')) return m.reply(`Is that a GitHub repo link ?!`)
+    let regex1 = /(?:https|git)(?::\/\/|@)github\.com[\/:]([^\/:]+)\/(.+)/i
+        let [, user3, repo] = text.match(regex1) || []
+        repo = repo.replace(/.git$/, '')
+        let url = `https://api.github.com/repos/${user3}/${repo}/zipball`
+        let filename = (await fetch(url, {method: 'HEAD'})).headers.get('content-disposition').match(/attachment; filename=(.*)/)[1]
+        await client.sendMessage(m.chat, { document: { url: url }, fileName: filename+'.zip', mimetype: 'application/zip' }, { quoted: m }).catch((err) => m.reply("error"))
+
+    		    }
+    },
+  },
+
+  // instagram (original Perez.js lines 3231-3269)
+  {
+    command: ['instagram'],
+    aliases: ['igdl', 'ig'],
+    description: 'Download an Instagram video',
+    category: 'downloads',
+    handler: async (client, m, { botname, text }) => {
+    {
+
+    const { igdl } = require("ruhend-scraper");
+
+      if (!text) {
+        return m.reply("Please provide an Instagram link for the video.");
+      }
+
+      if (!text.includes('https://www.instagram.com/')) {
+        return m.reply("That is not a valid Instagram link.");
+      }
+
+      try {
+
+        const downloadData = await igdl(text);
+
+        if (!downloadData || !downloadData.data || downloadData.data.length === 0) {
+          return m.reply("No video found at the provided link.");
+        }
+
+        const videoData = downloadData.data;
+        for (let i = 0; i < Math.min(20, videoData.length); i++) {
+          const video = videoData[i];
+          const videoUrl = video.url;
+
+          await client.sendMessage(m.chat, {
+            video: { url: videoUrl },
+            mimetype: "video/mp4",
+            caption: `DOWNLOADED BY ${botname}`
+          },{ quoted: m });
+        }
+      } catch (error) {
+        console.error(error);
+        return m.reply("An error occurred while processing the request.");
+      }
+    }
+    },
+  },
+
+  // pinterest (original Perez.js lines 3764-3807)
+  {
+    command: ['pinterest'],
+    aliases: ['pin'],
+    description: 'Download Pinterest media',
+    category: 'downloads',
+    handler: async (client, m, { mek, reply, text }) => {
+    {
+    	if (!text) return reply('𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝗽𝗶𝗻𝘁𝗲𝗿𝗲𝘀𝘁 𝗹𝗶𝗻𝗸 !');
+
+    if (!text.includes("pin.it")) {
+            return m.reply("That is not a pinterest link.");
+        }
+    await client.sendMessage(m.chat, {
+          react: { text: '🔄', key: m.key }
+        });
+
+    try {
+            const pinterestUrl = text;
+            const response = await axios.get(`https://bk9.fun/download/pinterest?url=${encodeURIComponent(pinterestUrl)}`);
+
+            if (!response.data.status) {
+                return reply('Unable to fetch pinterest data.');
+            }
+
+            const media = response.data.BK9;
+            const capp = `𝑫𝑶𝑾𝑵𝑳𝑶𝑨𝑫𝑬𝑫 𝑩𝒀 𝗡𝗘𝗫𝗨𝗦 𝐁𝐎𝐓`;
+
+    if (media.length > 0) {
+                const videoUrl = media.find(item => item.url.includes('.mp4'))?.url;
+                const imageUrl = media.find(item => item.url.includes('.jpg'))?.url;
+
+    if (videoUrl) {
+                    await client.sendMessage(m.chat, { video: { url: videoUrl }, caption: capp }, { quoted: m });
+                } else
+    if (imageUrl) {
+                    await client.sendMessage(m.chat, { image: { url: imageUrl }, caption: capp }, { quoted: m });
+                } else {
+                    reply('No Video found!');
+                }
+            } else {
+                reply('No Image found.');
+            }
+        } catch (e) {
+            console.error(e);
+            await client.sendMessage(m.chat, { react: { text: '☠️', key: mek.key } });
+            reply('An error occurred while processing your request.');
+        }
+    }
+    },
+  },
+
+  // play (original Perez.js lines 3546-3591)
+  {
+    command: ['play'],
+    aliases: [],
+    description: 'Download a song as audio',
+    category: 'downloads',
+    handler: async (client, m, { from, text }) => {
+    {
+     if (!text) {
+          return client.sendMessage(from, { text: 'Please provide a song name.' }, { quoted: m });
+        }
+
+    try {
+         const search = await yts(text);
+         const video = search.videos[0];
+
+            if (!video) {
+              return client.sendMessage(from, {
+                text: 'No results found for your query.'
+              }, { quoted: m });
+            }
+
+    m.reply("_Please wait your download is in progress_");
+
+            const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, '');
+            const fileName = `${safeTitle}.mp3`;
+            const apiURL = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(video.videoId)}&format=mp3`;
+
+            const response = await axios.get(apiURL);
+            const data = response.data;
+
+            if (!data.downloadLink) {
+              return client.sendMessage(from, {
+                text: 'Failed to retrieve the MP3 download link.'
+              }, { quoted: m });
+    	}
+
+    await client.sendMessage(from, {
+              document: { url: data.downloadLink },
+              mimetype: 'audio/mpeg',
+    	      caption: 'ᘜᗴᑎᗴᖇᗩTᗴᗪ ᗷY ᑎᗴ᙭ᑌՏ ᗰᗪ',
+              fileName
+            }, { quoted: m });
+
+          } catch (err) {
+            console.error('[PLAY] Error:', err);
+            await client.sendMessage(from, {
+              text: 'An error occurred while processing your request.'
+            }, { quoted: m });
+    }
+    }
+    },
+  },
+
+  // play2 (original Perez.js lines 3593-3633)
+  {
+    command: ['play2'],
+    aliases: [],
+    description: 'Download a song by name',
+    category: 'downloads',
+    handler: async (client, m, { text }) => {
+    {
+    		     const yts = require("yt-search");
+
+        try {
+            if (!text) return m.reply("What song do you want to download?");
+
+            const { videos } = await yts(text);
+            if (!videos || videos.length === 0) return m.reply("No songs found!");
+
+            const urlYt = videos[0].url;
+            let data = await fetchJson(`https://api.dreaded.site/api/ytdl/audio?url=${urlYt}`);
+
+            if (!data || !data.result || !data.result.download || !data.result.download.url) {
+                return m.reply("Failed to fetch audio from the API.");
+            }
+
+            const {
+                metadata: { title, thumbnail, duration, author },
+                download: { url: audioUrl, quality, filename },
+            } = data.result;
+
+            await client.sendMessage(m.chat, {
+     document: {url: audioUrl },
+    mimetype: "audio/mpeg",
+    caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗡𝗘𝗫𝗨𝗦-𝗠𝗗",
+     fileName: filename }, { quoted: m });
+
+            await client.sendMessage(
+                m.chat,
+                {
+                    audio: { url: audioUrl },
+                    mimetype: "audio/mpeg",
+                    fileName: filename,
+                },
+                { quoted: m }
+            );
+        } catch (error) {
+            m.reply("Download failed\n" + error.message);
+        }
+    }
+    },
+  },
+
+  // song (original Perez.js lines 3673-3717)
+  {
+    command: ['song'],
+    aliases: ['music'],
+    description: 'Download a song as audio',
+    category: 'downloads',
+    handler: async (client, m, { from, text }) => {
+    {
+     if (!text) {
+          return client.sendMessage(from, { text: 'Please provide a song name.' }, { quoted: m });
+        }
+
+    try {
+         const search = await yts(text);
+         const video = search.videos[0];
+
+            if (!video) {
+              return client.sendMessage(from, {
+                text: 'No results found for your query.'
+              }, { quoted: m });
+            }
+
+    m.reply("_Please wait your download is in progress_");
+
+            const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, '');
+            const fileName = `${safeTitle}.mp3`;
+            const apiURL = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(video.videoId)}&format=mp3`;
+
+            const response = await axios.get(apiURL);
+            const data = response.data;
+
+            if (!data.downloadLink) {
+              return client.sendMessage(from, {
+                text: 'Failed to retrieve the MP3 download link.'
+              }, { quoted: m });
+    	}
+
+    await client.sendMessage(from, {
+              audio: { url: data.downloadLink },
+              mimetype: 'audio/mpeg',
+              fileName
+            }, { quoted: m });
+
+          } catch (err) {
+            console.error('[PLAY] Error:', err);
+            await client.sendMessage(from, {
+              text: 'An error occurred while processing your request.'
+            }, { quoted: m });
+    }
+    }
+    },
+  },
+
+  // song2 (original Perez.js lines 4087-4161)
+  {
+    command: ['song2'],
+    aliases: [],
+    description: 'Download a song by name',
+    category: 'downloads',
+    handler: async (client, m, { text }) => {
+    {
+    		     const ytSearch = require('yt-search');
+    const fetch = require('node-fetch');
+
+      // Function to attempt download from API
+      const getDownloadData = async (apiUrl) => {
+        const response = await fetch(apiUrl);
+        return response.json();
+      };
+
+      try {
+        // Check if query is provided
+        if (!text || text.trim().length === 0) {
+          return m.reply('What song do you want to download ?');
+        }
+
+        // Perform a YouTube search based on the query
+        const searchResults = await ytSearch(text);
+
+        // Check if any videos were found
+        if (!searchResults || !searchResults.videos.length) {
+          return m.reply('No video found for the specified query.');
+        }
+
+        const firstVideo = searchResults.videos[0];
+        const videoUrl = firstVideo.url;
+    	  m.reply(`_Please wait your download on progress..._`)
+
+        // Attempt to download from different APIs
+        let downloadData;
+        let downloadUrl;
+        let videoDetails;
+
+        // Try Gifted API
+        downloadData = await getDownloadData(`https://api.giftedtech.my.id/api/download/dlmp3?url=${encodeURIComponent(videoUrl)}&apikey=gifted`);
+        if (downloadData.success) {
+          downloadUrl = downloadData.result.download_url;
+          videoDetails = downloadData.result;
+        } else {
+          // Try Yasiya API if Gifted fails
+          downloadData = await getDownloadData(`https://www.dark-yasiya-api.site/download/ytmp3?url=${encodeURIComponent(videoUrl)}`);
+          if (downloadData.success) {
+            downloadUrl = downloadData.result.download_url;
+            videoDetails = downloadData.result;
+          } else {
+            // Try Dreaded API if both fail
+            downloadData = await getDownloadData(`https://api.dreaded.site/api/ytdl/audio?url=${encodeURIComponent(videoUrl)}`);
+            if (downloadData.success) {
+              downloadUrl = downloadData.result.download_url;
+              videoDetails = downloadData.result;
+            }
+          }
+        }
+
+        // Check if a valid download URL was found
+        if (!downloadUrl || !videoDetails) {
+          return m.reply('Failed to retrieve download URL from all sources. Please try again later.');
+        }
+
+        // Prepare the message payload with external ad details
+        const messagePayload = {
+          audio: { url: downloadUrl },
+          mimetype: 'audio/mp4',
+          fileName: `${videoDetails.title}.mp3`
+            };
+
+        // Send the download link to the user
+        await client.sendMessage(m.chat, messagePayload, { quoted: m });
+
+      } catch (error) {
+        console.error('Error during download process:', error);
+        return m.reply(`Download failed due to an error: ${error.message || error}`);
+      }
+          }
+    },
+  },
+
+  // tiktok (original Perez.js lines 3428-3486)
+  {
+    command: ['tiktok'],
+    aliases: ['tikdl'],
+    description: 'Download a TikTok video',
+    category: 'downloads',
+    handler: async (client, m, { text }) => {
+    {
+    const fetch = require("node-fetch");
+
+        const fetchTikTokData = async (url, retries = 3) => {
+            for (let attempt = 0; attempt < retries; attempt++) {
+                const data = await fetchJson(url);
+                if (
+                    data &&
+                    data.status === 200 &&
+                    data.tiktok &&
+                    data.tiktok.video &&
+                    data.tiktok.description &&
+                    data.tiktok.author.nickname &&
+                    data.tiktok.statistics.likeCount
+                ) {
+                    return data;
+                }
+            }
+            throw new Error("Failed to fetch valid TikTok data after multiple attempts.");
+        };
+
+        try {
+            if (!text) return m.reply("Provide a TikTok link for the video.");
+            if (!text.includes("tiktok.com")) return m.reply("That is not a valid TikTok link.");
+
+            const url = `https://api.dreaded.site/api/tiktok?url=${text}`;
+            const data = await fetchTikTokData(url);
+
+            const tikVideoUrl = data.tiktok.video;
+            const tikDescription = data.tiktok.description || "No description available";
+            const tikAuthor = data.tiktok.author.nickname || "Unknown Author";
+            const tikLikes = data.tiktok.statistics.likeCount || "0";
+            const tikComments = data.tiktok.statistics.commentCount || "0";
+            const tikShares = data.tiktok.statistics.shareCount || "0";
+
+            const caption = `🎥 TikTok Video\n\n📌 *Description:* ${tikDescription}\n👤 *Author:* ${tikAuthor}\n❤️ *Likes:* ${tikLikes}\n💬 *Comments:* ${tikComments}\n🔗 *Shares:* ${tikShares}`;
+
+            m.reply(`Data fetched successfully✅ wait a moment. . .`);
+
+            const response = await fetch(tikVideoUrl);
+
+            if (!response.ok) {
+                throw new Error(`Failed to download video: HTTP ${response.status}`);
+            }
+
+            const arrayBuffer = await response.arrayBuffer();
+            const videoBuffer = Buffer.from(arrayBuffer);
+
+            await client.sendMessage(m.chat, {
+                video: videoBuffer,
+                mimetype: "video/mp4",
+                caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗡𝗘𝗫𝗨𝗦-𝗠𝗗",
+            }, { quoted: m });
+
+        } catch (error) {
+            m.reply(`Error: ${error.message}`);
+        }
+    }
+    },
+  },
+
+  // twitter (original Perez.js lines 3272-3299)
+  {
+    command: ['twitter'],
+    aliases: ['twtdl'],
+    description: 'Download a Twitter/X video',
+    category: 'downloads',
+    handler: async (client, m, { text }) => {
+    {
+    if (!text) return m.reply("𝗽𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝘁𝘄𝗶𝘁𝘁𝗲𝗿 𝗹𝗶𝗻𝗸 !");
+
+    try {
+
+    const data = await fetchJson(`https://api.dreaded.site/api/alldl?url=${text}`);
+
+    if (!data || data.status !== 200 || !data.data || !data.data.videoUrl) {
+                return m.reply("𝗦𝗼𝗿𝗿𝘆 𝘁𝗵𝗲 𝗔𝗣𝗜 𝗱𝗶𝗱𝗻'𝘁 𝗿𝗲𝘀𝗽𝗼𝗻𝗱 𝗰𝗼𝗿𝗿𝗲𝗰𝘁𝗹𝘆. 𝗣𝗹𝗲𝗮𝘀𝗲 𝘁𝗿𝘆 𝗔𝗴𝗮𝗶𝗻 𝗹𝗮𝘁𝗲𝗿!");
+            }
+
+    const twtvid = data.data.videoUrl;
+
+    await client.sendMessage(m.chat,{video : {url : twtvid },caption : `𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝑵𝑬𝑿𝑼𝑺 𝑴𝑫`,gifPlayback : false },{quoted : m})
+
+    } catch (e) {
+
+    m.reply("An error occured. API might be down\n" + e)
+
+    }
+
+    		}
+    },
+  },
+
+  // video (original Perez.js lines 4274-4354)
+  {
+    command: ['video'],
+    aliases: [],
+    description: 'Download a video by name',
+    category: 'downloads',
+    handler: async (client, m, { text }) => {
+    {
+    const axios = require('axios');
+    const ytSearch = require('yt-search');
+
+      // Check if a query is provided
+      if (!text) {
+        return m.reply("What video do you want to download ?");
+      }
+
+      try {
+        // Perform a YouTube search based on the query
+        const searchResults = await ytSearch(text);
+
+        // Check if any videos were found
+        if (!searchResults || !searchResults.videos.length) {
+          return m.reply('No video found for the specified query.');
+        }
+
+        const firstVideo = searchResults.videos[0];
+        const videoUrl = firstVideo.url;
+
+        // Function to get download data from APIs
+        const getDownloadData = async (url) => {
+          try {
+            const response = await axios.get(url);
+            return response.data;
+          } catch (error) {
+            console.error('Error fetching data from API:', error);
+            return { success: false };
+          }
+        };
+
+        // List of APIs to try
+        const apis = [
+          `https://api-rin-tohsaka.vercel.app/download/ytmp4?url=${encodeURIComponent(videoUrl)}`,
+          `https://api.davidcyriltech.my.id/download/ytmp4?url=${encodeURIComponent(videoUrl)}`,
+          `https://www.dark-yasiya-api.site/download/ytmp4?url=${encodeURIComponent(videoUrl)}`,
+          `https://api.giftedtech.web.id/api/download/dlmp4?url=${encodeURIComponent(videoUrl)}&apikey=gifted-md`,
+          `https://api.dreaded.site/api/ytdl/video?url=${encodeURIComponent(videoUrl)}`
+        ];
+
+        let downloadData;
+        for (const api of apis) {
+          downloadData = await getDownloadData(api);
+          if (downloadData && downloadData.success) break;
+        }
+
+        // Check if a valid download URL was found
+        if (!downloadData || !downloadData.success) {
+          return m.reply('Failed to fetch audio from the API');
+        }
+
+        const downloadUrl = downloadData.result.download_url;
+        const videoDetails = downloadData.result;
+
+        // Prepare the message payload with external ad details
+        const messagePayload = {
+          document: { url: downloadUrl },
+          mimetype: 'video/mpeg',
+          caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗡𝗘𝗫𝗨𝗦-𝗠𝗗",
+          fileName: `${videoDetails.title}.mp3`,
+        };
+
+    	const messagePaylod = {
+          video: { url: downloadUrl },
+          mimetype: 'video/mp4',
+          caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗡𝗘𝗫𝗨𝗦-𝗠𝗗",
+          fileName: `${videoDetails.title}.mp4`,
+        };
+
+        // Send the download link to the user
+        await client.sendMessage(m.chat, messagePayload, { quoted: m });
+
+        await client.sendMessage(m.chat, messagePaylod, { quoted: m });
+
+      } catch (error) {
+        console.error('Error during download process:', error);
+        return m.reply(`Download failed due to an error: ${error.message || error}`);
+      }
+    							     }
+    },
+  },
+
+  // ytmp3 (original Perez.js lines 4187-4229)
+  {
+    command: ['ytmp3'],
+    aliases: ['yta'],
+    description: 'Download YouTube audio from a link',
+    category: 'downloads',
+    handler: async (client, m, { text }) => {
+    {
+    const ytSearch = require("yt-search");
+    const fetch = require('node-fetch');
+    try {
+
+    if (!text) return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝗬𝗼𝘂𝘁𝘂𝗯𝗲 𝗹𝗶𝗻𝗸!")
+
+    	let urls = text.match(/(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/(?:watch\?v=|v\/|embed\/|shorts\/|playlist\?list=)?)([a-zA-Z0-9_-]{11})/gi);
+    	if (!urls) return m.reply('𝗧𝗵𝗶𝘀 𝗶𝘀 𝗻𝗼𝘁 𝗮 𝗬𝗼𝘂𝘁𝘂𝗯𝗲 𝗟𝗶𝗻𝗸');
+    	let urlIndex = parseInt(text) - 1;
+    	if (urlIndex < 0 || urlIndex >= urls.length)
+    		return m.reply('𝗜𝗻𝘃𝗮𝗹𝗶𝗱 𝗟𝗶𝗻𝗸.');
+
+            const { videos } = await yts(text);
+            if (!videos || videos.length === 0) return m.reply("No songs found!");
+
+            const urlYt = videos[0].url;
+            let data = await fetchJson(`https://api.dreaded.site/api/ytdl/audio?url=${urlYt}`);
+
+            if (!data || !data.result || !data.result.url) {
+                return m.reply("Failed to fetch audio from the API.");
+            }
+
+            const audioUrl = data.result.url;
+    const title = data.result.title;
+
+            await client.sendMessage(
+                m.chat,
+                {
+                    audio: { url: audioUrl },
+                    mimetype: "audio/mpeg",
+                    fileName: `${title}.mp3`,
+                },
+                { quoted: m }
+            );
+        } catch (error) {
+            m.reply("Download failed\n" + error.message);
+        }
+    }
+    },
+  },
+
+  // ytmp4 (original Perez.js lines 4231-4273)
+  {
+    command: ['ytmp4'],
+    aliases: ['ytv'],
+    description: 'Download a YouTube video from a link',
+    category: 'downloads',
+    handler: async (client, m, { text }) => {
+    {
+    	try {
+
+    if (!text) return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝗬𝗼𝘂𝗧𝘂𝗯𝗲 𝗹𝗶𝗻𝗸!")
+
+            let urls = text.match(/(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/(?:watch\?v=|v\/|embed\/|shorts\/|playlist\?list=)?)([a-zA-Z0-9_-]{11})/gi);
+            if (!urls) return m.reply('𝗧𝗵𝗶𝘀 𝗶𝘀 𝗻𝗼𝘁 𝗮 𝗬𝗼𝘂𝗧𝘂𝗯𝗲 𝗹𝗶𝗻𝗸');
+            let urlIndex = parseInt(text) - 1;
+            if (urlIndex < 0 || urlIndex >= urls.length)
+                    return m.reply('𝗜𝗻𝘃𝗮𝗹𝗶𝗱 𝗹𝗶𝗻𝗸.');
+
+            const { videos } = await yts(text);
+            if (!videos || videos.length === 0) return m.reply("No songs found!");
+
+            const urlYt = videos[0].url;
+            let data = await fetchJson(`https://api.dreaded.site/api/ytdl/video?url=${urlYt}`);
+
+            if (!data || !data.result || !data.result.url) {
+                return m.reply("Failed to fetch video from the API.");
+            }
+
+            const audioUrl = data.result.url;
+    const title = data.result.title;
+
+            await client.sendMessage(
+                m.chat,
+                {
+                    video: { url: audioUrl },
+                    mimetype: "video/mpeg",
+                    fileName: `${title}.mp4`,
+                },
+                { quoted: m }
+            );
+        } catch (error) {
+            m.reply("Download failed\n" + error.message);
+        }
+    }
+    },
+  },
+
+  // ytsearch (original Perez.js lines 4163-4185)
+  {
+    command: ['ytsearch'],
+    aliases: ['yts'],
+    description: 'Search YouTube',
+    category: 'downloads',
+    handler: async (client, m, { reply, text }) => {
+    {
+            if (!text) {
+                reply('Provide a search term!\E.g: Alan walker alone')
+                return;
+            }
+            const term = text;
+            const {
+                videos
+            } = await yts(term);
+            if (!videos || videos.length <= 0) {
+                reply(`No Matching videos found for : *${term}*!!`)
+                return;
+            }
+            const length = videos.length < 10 ? videos.length : 10;
+            let tex = `YouTube Search\n🔍 Query ~> ${term}\n\n`;
+            for (let i = 0; i < length; i++) {
+                tex += `Link ~> ${videos[i].url}\nChannel ~> ${videos[i].author.name}\nTitle ~> ${videos[i].title}\n\n`;
+            }
+            reply(tex)
+            return;
+        }
+    },
+  },
+];
