@@ -19,6 +19,8 @@ const BASE_URL = 'https://noobs-api.top';
 const ytdl = require("ytdl-core");
 const { getSettings, updateSetting } = require('./database/config');
 const fetchSettings = require('./database/fetchSettings');
+const groupCache = require('./lib/Groupcache');
+const identity = require('./lib/Identity');
 const Client = new Genius.Client(process.env.GENIUS_API_KEY); // Scrapes if no key is provided
 const { fetchUrl, isUrl, processTime } = require("./lib/dreadfunc");
 const { TelegraPh, UploadFileUgu, webp2mp4File, floNime } = require('./lib/dreadupload');
@@ -45,7 +47,6 @@ module.exports = async function Perez(client, m, chatUpdate, store) {
   antitag	
 } = await fetchSettings(); 
 	  
-console.log(prefix);
 	  
     var body =
       m.mtype === "conversation"
@@ -75,7 +76,7 @@ const botname = "Tesla MD";
     const args = body.trim().split(/ +/).slice(1);
     const pushname = m.pushName || "No Name";
     const botNumber = await client.decodeJid(client.user.id);
-    const itsMe = m.sender == botNumber ? true : false;
+    const itsMe = m.fromMe || identity.botIds(client).has(identity.bare(m.sender));
     let text = (q = args.join(" "));
     const arg = budy.trim().substring(budy.indexOf(" ") + 1);
     const arg1 = arg.trim().substring(arg.indexOf(" ") + 1);
@@ -108,31 +109,25 @@ const DevDreaded = dev.split(",");
 const badwordkick = process.env.BAD_WORD_KICK || 'FALSE';
 const bad = process.env.BAD_WORD || 'fuck';
 const badwords = bad.split(",")
-    // Group
    
-     const groupMetadata = m.isGroup ? await client.groupMetadata(m.chat).catch((e) => { }) : "";  
-    const groupName = m.isGroup && groupMetadata ? await groupMetadata.subject : "";  
-    const participants = m.isGroup && groupMetadata
-  ? groupMetadata.participants
+     const groupMetadata = m.isGroup ? await groupCache.fetchMetadata(client, m.chat).catch((e) => { }) : "";
+    const groupName = m.isGroup && groupMetadata ? await groupMetadata.subject : "";
+    const groupParticipants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
+    const participants = groupParticipants
       .filter(p => p.id)
-      .map(p => p.id)
-  : [];
-    const groupAdmin = m.isGroup
-  ? groupMetadata.participants
-      .filter(p => p.admin && p.id)
-      .map(p => p.id)
-  : [];
-    const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumber) : false; 
-	const groupSender = m.isGroup && groupMetadata
-  ? (() => {
-      const found = groupMetadata.participants.find(p => 
-        p.id === sender || client.decodeJid(p.id) === client.decodeJid(sender)
-      );
-      return found?.id || sender;
-    })()
-  : sender;
-     const isAdmin = m.isGroup ? groupAdmin.includes(groupSender) : false;
-     const Owner = DevDreaded.map((v) => v.replace(/[^0-9]/g, "") + "@s.whatsapp.net").includes(groupSender)
+      .map(p => p.id);
+    
+    const adminIds = identity.adminIdSet(groupParticipants);
+    const groupAdmin = groupParticipants
+      .filter(p => (p.admin || p.isAdmin || p.isSuperAdmin) && p.id)
+      .map(p => p.id);
+    const isBotAdmin = m.isGroup ? identity.overlaps(identity.botIds(client), adminIds) : false;
+    const senderAllIds = identity.senderIds(m, mek, groupParticipants);
+    const groupSender = m.isGroup
+      ? ((groupParticipants.find(p => identity.participantIds(p).some(id => senderAllIds.has(id))) || {}).id || sender)
+      : sender;
+     const isAdmin = m.isGroup ? identity.overlaps(senderAllIds, adminIds) : false;
+     const Owner = identity.isOwner(senderAllIds, DevDreaded);
      const admin = process.env.ADMIN_MSG || '𝗖𝗼𝗺𝗺𝗮𝗻𝗱 𝗿𝗲𝘀𝗲𝗿𝘃𝗲𝗱 𝗳𝗼𝗿 𝗔𝗱𝗺𝗶𝗻𝘀!';
      const group = process.env.GROUP_ONLY_MSG || '𝗖𝗼𝗺𝗺𝗮𝗻𝗱 𝗺𝗲𝗮𝗻𝘁 𝗳𝗼𝗿 𝗚𝗿𝗼𝘂𝗽𝘀!';
      const botAdmin = process.env.BOT_ADMIN_MSG || '𝗜 𝗻𝗲𝗲𝗱 𝗔𝗱𝗺𝗶𝗻 𝗽𝗿𝗲𝘃𝗶𝗹𝗲𝗱𝗴𝗲𝘀!'
@@ -153,6 +148,7 @@ const runtime = function (seconds) {
  }   
 const timestamp = speed(); 
 const dreadedspeed = speed() - timestamp 
+	  
 //antidelete function ,,,, what does that mean????
 const baseDir = 'message_data';
     if (!fs.existsSync(baseDir)) {
@@ -169,20 +165,14 @@ function loadChatData(remoteJid, messageId) {
   }
 }
 
+// written without blocking, so saving a message for antidelete does not delay the reply
 function saveChatData(remoteJid, messageId, chatData) {
   const chatDir = path.join(baseDir, remoteJid);
-
-  if (!fs.existsSync(chatDir)) {
-    fs.mkdirSync(chatDir, { recursive: true });
-  }
-
   const chatFilePath = path.join(chatDir, `${messageId}.json`);
 
-  try {
-    fs.writeFileSync(chatFilePath, JSON.stringify(chatData, null, 2));
-  } catch (error) {
-    console.error('Error saving chat data:', error);
-  }
+  fs.promises.mkdir(chatDir, { recursive: true })
+    .then(() => fs.promises.writeFile(chatFilePath, JSON.stringify(chatData)))
+    .catch((error) => console.error('Error saving chat data:', error));
 }
 
 function handleIncomingMessage(message) {
