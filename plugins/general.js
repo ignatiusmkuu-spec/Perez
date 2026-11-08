@@ -390,26 +390,7 @@ module.exports = [
     description: 'Show the bot script and repo link',
     category: 'general',
     handler: async (client, m) => {
-    client.sendMessage(m.chat, { image: { url: `https://files.catbox.moe/t7qghl.jpg` }, caption:
-    `╭───────────────────────────✦
-    │ 🌌✨ Step into the Future — Deploy the Ultimate Bot ✨🌌
-    │
-    │ 💠 Unleash the power of 𝗡𝗘𝗫𝗨𝗦-𝗠𝗗 — fast, sleek, unstoppable ⚡
-    │ 🌟 Fork the repo • Smash that star • Rule your chats!
-    │ 🔗 GitHub 👉 https://github.com/Ignatiusperez/Perez/
-    │
-    │ 💬 Pair your WhatsApp in seconds:
-    │   ∘ 🔥 Primary Link → https://perez-md-pairing.onrender.com
-    │   ∘ 🌙 Backup Link → https://perez-tech.onrender.com
-    │
-    │ ⚡ Deploy effortlessly with one click:
-    │   🚀 https://dashboard.heroku.com/new-app?template=https://github.com/Ignatiusperez/Perez/
-    │
-    │ 💎 Upload ➝ Connect ➝ Deploy ➝ ✨ Take Control ✨
-    │
-    │ 🌍 Enjoy the brilliance of 𝗡𝗘𝗫𝗨𝗦-𝗠𝗗
-    │ 🪐 Beautifully crafted — Made on Earth by Humans 🪽
-    ╰───────────────────────────✦` },{quoted : m });
+    client.sendMessage(m.chat, { text: "Not published yet" });
     },
   },
 
