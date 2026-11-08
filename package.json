@@ -83,16 +83,5 @@
       "libsignal": "6.0.0"
     }
   }
-  "directories": {
-    "lib": "lib",
-    "src": "src"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Ignatiusperez/Perez.git"
-  },
-  "bugs": {
-    "url": "https://github.com/Ignatiusperez/Perez/issues"
-  },
-  "homepage": "https://github.com/Ignatiusperez/Perez#readme"
 }
+  
