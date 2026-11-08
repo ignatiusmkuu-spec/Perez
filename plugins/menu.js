@@ -57,31 +57,31 @@ function commandsByCategory() {
 function buildMenu({ botname, greeting, pushname, prefix, uptime }) {
   const byCategory = commandsByCategory();
   const total = Object.values(byCategory).reduce((sum, names) => sum + names.length, 0);
-  const line = '━━━━━━━━━━━━━━━━━';
+  const line = '━━━━━━━━━━━━━━━━';
 
   let menu = `${greeting}\n\n`;
   menu += `╭${line}╮\n`;
   menu += `┃    ${toBold(botname)} \n`;
   menu += `╰${line}╯\n\n`;
 
-  menu += `┏━━━━━━━━━━━━━━\n`;
+  menu += `┏${line}\n`;
   menu += `┃ ▪︎▪︎▪︎ ${toBold('User')}  ⟫  ${pushname}\n`;
   menu += `┃ ▪︎▪︎▪︎ ${toBold('Prefix')}  ⟫  [ ${prefix} ]\n`;
   menu += `┃ ▪︎▪︎▪︎ ${toBold('Uptime')}  ⟫  ${uptime}\n`;
   menu += `┃ ▪︎▪︎▪︎ ${toBold('Commands')}  ⟫  ${total}\n`;
-  menu += `┗━━━━━━━━━━━━━━━\n\n`;
+  menu += `┗${line}\n\n`;
 
   for (const [category, names] of Object.entries(byCategory)) {
     const icon = CATEGORY_ICONS[category] || '🧭';
     const symbol = CATEGORY_SYMBOLS[category] || '□';
-     ${icon} ${toBold(category.toUpperCase())}
+    menu += ` > ${icon} ${toBold(category.toUpperCase())}\n`;
     menu += `╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮\n`;
     for (const name of names) menu += `┃ ${symbol} │ ${formatCmd(name)}\n`;
     menu += `╰══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╯\n\n`;
   }
 
   menu += `${line}\n`;
-  menu += `${toBold(botname)}\n`;
+  menu += `${toBoldItalic('A bot beyond the stars')}\n`;
   menu += `${line}`;
   return { menu, total };
 }
@@ -98,7 +98,7 @@ module.exports = [
       const chat = m.chat || from;
       const { menu, total } = buildMenu({
         botname,
-        greeting: `HI 😁🌄, ${getGreeting()}`,
+        greeting: `Hey There, ${getGreeting()}`,
         pushname,
         prefix,
         uptime: runtime(process.uptime()),
