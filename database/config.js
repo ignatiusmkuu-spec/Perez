@@ -55,7 +55,21 @@ async function initializeDatabase() {
   }
 }
 
+// Settings are read on every incoming message, so they are cached for a short time. updateSetting()
+// clears the cache, so a change made with a command applies immediately.
+const SETTINGS_TTL_MS = 30 * 1000;
+let settingsCache = null;
+let settingsCachedAt = 0;
+
 async function getSettings() {
+  if (settingsCache && Date.now() - settingsCachedAt < SETTINGS_TTL_MS) return { ...settingsCache };
+  const fresh = await readSettings();
+  settingsCache = fresh;
+  settingsCachedAt = Date.now();
+  return { ...fresh };
+}
+
+async function readSettings() {
   const client = await pool.connect();
 
   try {
@@ -69,7 +83,6 @@ async function getSettings() {
       settings[row.key] = row.value;
     }
 
-    console.log("✅ Settings fetched from DB.");
     return settings;
 
   } catch (err) {
@@ -94,7 +107,7 @@ async function updateSetting(key, value) {
       [value, key]
     );
 
-   
+    settingsCache = null; // next read fetches the new value
     return true;
   } catch (err) {
     console.error("❌ Failed to update setting:", err.message || err);
