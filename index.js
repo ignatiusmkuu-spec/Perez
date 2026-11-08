@@ -26,9 +26,9 @@ const _ = require("lodash");
 const PhoneNumber = require("awesome-phonenumber");
 const { initializeDatabase } = require('./database/config');
 const fetchSettings = require('./database/fetchSettings');
+const groupCache = require('./lib/groupcache');
 const { imageToWebp, videoToWebp, writeExifImg, writeExifVid } = require('./lib/dreadexif'); 
 const { isUrl, smsg, generateMessageTag, getBuffer, getSizeMedia, fetchJson, await, sleep } = require('./lib/dreadfunc');
-//const store = makeInMemoryStore({ logger: pino().child({ level: "silent", stream: "store" }) });
 const makeInMemoryStore = require('./store/store.js'); 
 const store = makeInMemoryStore({ logger: logger.child({ stream: 'store' }) });
 
@@ -90,6 +90,7 @@ async function startperez() {
     useMultiFileAuthState,
     DisconnectReason,
     fetchLatestBaileysVersion,
+    makeCacheableSignalKeyStore,
     downloadContentFromMessage,
     jidDecode,
     proto,
@@ -100,14 +101,14 @@ async function startperez() {
     databaseInitialized = true;
   }
 
-  let autobio, autolike, welcome, autoview, mode, prefix, anticall;
+  let autobio, welcome, mode, prefix, anticall;
 
 try {
   const settings = await fetchSettings();
   console.log("😴 settings object:", settings);
 
   
-  ({ autobio, autolike, welcome, autoview, mode, prefix, anticall } = settings);
+  ({ autobio, welcome, mode, prefix, anticall } = settings);
 
   console.log("✅ Settings loaded successfully.... indexfile");
 } catch (error) {
@@ -135,9 +136,18 @@ try {
     logger: pino({ level: "silent" }),
     printQRInTerminal: false,
     browser: [botname, "Safari", "5.1.7"],
-    auth: state,
-syncFullHistory: true,
+    
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
+    },
+    
+    cachedGroupMetadata: async (jid) => groupCache.get(jid),
+    
+    syncFullHistory: false,
   });
+
+groupCache.bind(client);
 
 store.bind(client.ev);
   
@@ -157,7 +167,7 @@ if (autobio === 'on'){
 }
   
   client.ev.on("messages.upsert", async (chatUpdate) => {
-    //console.log(JSON.stringify(chatUpdate, undefined, 2))
+    
     try {
 
       if (!chatUpdate.messages?.length) return;
@@ -165,19 +175,27 @@ if (autobio === 'on'){
       if (!mek.message) return;
       mek.message = Object.keys(mek.message)[0] === "ephemeralMessage" ? mek.message.ephemeralMessage.message : mek.message;
 
-      if (autoview === 'on' && autolike === 'on' && mek.key && mek.key.remoteJid === "status@broadcast") {
-
-const mokayas = await client.decodeJid(client.user.id);
-
-await client.sendMessage(mek.key.remoteJid, { react: { key: mek.key, text: '🧚'}}, { statusJidList: [mek.key.participant, mokayas] });
-      }
       
-      if (autoview === 'on' && mek.key && mek.key.remoteJid === "status@broadcast") {
+      if (mek.key && mek.key.remoteJid === "status@broadcast") {
+        if (chatUpdate.type !== "notify" || mek.key.fromMe) return;
+        try {
+          const live = await fetchSettings();
+          if (live.autoview === 'on') {
+            await client.readMessages([mek.key]);
+            if (live.autolike === 'on') {
+              const own = await client.decodeJid(client.user.id);
+              
+              const poster = mek.key.participantAlt || mek.key.participant;
+              const statusJidList = [...new Set([poster, own].filter(Boolean))];
+              await client.sendMessage(mek.key.remoteJid, { react: { key: mek.key, text: '🧚' } }, { statusJidList });
+            }
+          }
+        } catch (error) {
+          console.log('Status view/like failed:', error.message || error);
+        }
+        return; 
+      }
 
-         client.readMessages([mek.key]);
-
-}
-   
       if (!client.public && !mek.key.fromMe && chatUpdate.type === "notify") return;
       
       const m = smsg(client, mek, store);
