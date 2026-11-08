@@ -76,7 +76,7 @@
     "ytdl-core": "npm:@distube/ytdl-core",
     "ytdl-secktor": "^0.0.1-development",
     "libsignal": "6.0.0"
-  }
+  },
   "overrides": {
     "libsignal": "6.0.0",
     "@whiskeysockets/baileys": {
