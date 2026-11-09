@@ -106,8 +106,8 @@ test("dispatch reports unknown commands, thrown messages and crashes", async () 
 });
 
 test("plugins only unpack names that Perez.js passes in the context", () => {
-  const perez = fs.readFileSync(path.join(__dirname, "..", "Perez.js"), "utf8");
-  const block = perez.match(/handler\.dispatch\(command, client, m, \{([\s\S]*?)\}\);/);
+  const tesla = fs.readFileSync(path.join(__dirname, "..", "tesla.js"), "utf8");
+  const block = tesla.match(/handler\.dispatch\(command, client, m, \{([\s\S]*?)\}\);/);
   assert.ok(block, "handler.dispatch(command, client, m, {...}) call not found in Perez.js");
   const supplied = new Set(block[1].split(/[,\n]/).map((s) => s.trim().split(":")[0].trim()).filter(Boolean));
 
