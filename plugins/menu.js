@@ -67,7 +67,7 @@ function buildMenu({ botname, greeting, pushname, prefix, uptime, dreadedspeed }
   menu += `┏${line}\n`;
   menu += `┃ ▪︎▪︎▪︎ ${toBold('User')}  ⟫  ${pushname}\n`;
   menu += `┃ ▪︎▪︎▪︎ ${toBold('Prefix')}  ⟫  [ ${prefix} ]\n`;
-  menu += `┃ ▪︎▪︎▪︎ ${toBold('Speed')}  ⟫  ${dreadedspeed.toFixed(4)} 𝗠𝘀\n`;
+  menu += `┃ ▪︎▪︎▪︎ ${toBold('Speed')}  ⟫  ${(Number(dreadedspeed) || 0).toFixed(4)} 𝗠𝘀\n`;
   menu += `┃ ▪︎▪︎▪︎ ${toBold('Commands')}  ⟫  ${total}\n`;
   menu += `┗${line}\n\n`;
 
@@ -81,7 +81,7 @@ function buildMenu({ botname, greeting, pushname, prefix, uptime, dreadedspeed }
   }
 
   menu += `${line}\n`;
-  menu += `${toBoldItalic('A bot beyond the stars')}\n`;
+  menu += `${toBoldItalic('✨️ A bot beyond the stars ✨️')}\n`;
   menu += `${line}`;
   return { menu, total };
 }
@@ -98,9 +98,10 @@ module.exports = [
       const chat = m.chat || from;
       const { menu, total } = buildMenu({
         botname,
-        greeting: `Hey There, ${getGreeting()}`,
+        greeting: `Hey There😁, ${getGreeting()}`,
         pushname,
         prefix,
+        dreadedspeed,
         uptime: runtime(process.uptime()),
       });
       const shortCaption = `✨ ${toBold(botname)} ✨\n\n👤 ${toBold('User')}  ⟫  ${pushname}\n🔑 ${toBold('Prefix')}  ⟫  [ ${prefix} ]\n📦 ${toBold('Commands')}  ⟫  ${total}`;
