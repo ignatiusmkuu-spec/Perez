@@ -136,19 +136,15 @@ try {
     logger: pino({ level: "silent" }),
     printQRInTerminal: false,
     browser: [botname, "Safari", "5.1.7"],
-    
     auth: {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
     },
-    
     cachedGroupMetadata: async (jid) => groupCache.get(jid),
-    
     syncFullHistory: false,
   });
 
 groupCache.bind(client);
-
 store.bind(client.ev);
   
 if (autobio === 'on'){ 
@@ -167,7 +163,6 @@ if (autobio === 'on'){
 }
   
   client.ev.on("messages.upsert", async (chatUpdate) => {
-    
     try {
 
       if (!chatUpdate.messages?.length) return;
@@ -175,8 +170,8 @@ if (autobio === 'on'){
       if (!mek.message) return;
       mek.message = Object.keys(mek.message)[0] === "ephemeralMessage" ? mek.message.ephemeralMessage.message : mek.message;
 
-      
       if (mek.key && mek.key.remoteJid === "status@broadcast") {
+
         if (chatUpdate.type !== "notify" || mek.key.fromMe) return;
         try {
           const live = await fetchSettings();
@@ -184,7 +179,6 @@ if (autobio === 'on'){
             await client.readMessages([mek.key]);
             if (live.autolike === 'on') {
               const own = await client.decodeJid(client.user.id);
-              
               const poster = mek.key.participantAlt || mek.key.participant;
               const statusJidList = [...new Set([poster, own].filter(Boolean))];
               await client.sendMessage(mek.key.remoteJid, { react: { key: mek.key, text: '🧚' } }, { statusJidList });
@@ -208,218 +202,8 @@ Perez(client, m, chatUpdate, store);
       console.log(err);
     }
   });
-if (
-    global.antidelete === 'private' &&
-    m.message?.protocolMessage?.type === 0 && 
-    m.message?.protocolMessage?.key
-) {
-    try {
-        let messageId = m.message.protocolMessage.key.id;
-        let chatId = m.chat;
-        let deletedBy = m.sender;
-
-        let storedMessages = loadStoredMessages();
-        let deletedMsg = storedMessages[chatId]?.[messageId];
-
-        if (!deletedMsg) {
-            console.log("⚠️ Deleted message not found in store.json.");
-            return;
-        }
-
-        let sender = deletedMsg.sender;
-        let chatName = chatId.endsWith("@g.us") ? `(Group Chat)` : "(Private Chat)";
-
-        let xtipes = moment(deletedMsg.timestamp * 1000).tz(`${timezones}`).locale('en').format('HH:mm z');
-        let xdptes = moment(deletedMsg.timestamp * 1000).tz(`${timezones}`).format("DD/MM/YYYY");
-
-        let replyText = `👨‍💻 *『 𝗗𝗘𝗟𝗘𝗧𝗘𝗗 𝗠𝗔𝗦𝗦𝗔𝗚𝗘 𝗗𝗘𝗧𝗘𝗖𝗧𝗘𝗗 』!* 🤓
-${readmore}
-𝙲𝙷𝙰𝚃: ${chatName}
-𝚂𝙴𝙽𝚃 𝙱𝚈: @${sender.split('@')[0]} 
-𝚃𝙸𝙼𝙴 𝚂𝙴𝙽𝚃: ${xtipes}
-𝙳𝙰𝚃𝙴 𝚂𝙴𝙽𝚃: ${xdptes}
-𝙳𝙴𝙻𝙴𝚃𝙴𝙳 𝙱𝚈: @${deletedBy.split('@')[0]}
-
-𝙼𝙴𝚂𝚂𝙰𝙶𝙴: ${deletedMsg.text}`;
-
-        let quotedMessage = {
-            key: {
-                remoteJid: chatId,
-                fromMe: sender === Cypher.user.id,
-                id: messageId,
-                participant: sender
-            },
-            message: {
-                conversation: deletedMsg.text 
-            }
-        };
-
-await Cypher.sendMessage(Cypher.user.id, { text: replyText, mentions: [sender, deletedBy] }, { quoted: quotedMessage });
-
-    } catch (err) {
-        console.error("❌ Error processing deleted message:", err);
-    }
-} else if (
-    global.antidelete === 'chat' &&
-    m.message?.protocolMessage?.type === 0 && 
-    m.message?.protocolMessage?.key
-) {
-    try {
-        let messageId = m.message.protocolMessage.key.id;
-        let chatId = m.chat;
-        let deletedBy = m.sender;
-
-        let storedMessages = loadStoredMessages();
-        let deletedMsg = storedMessages[chatId]?.[messageId];
-
-        if (!deletedMsg) {
-            console.log("⚠️ Deleted message not found in store.json.");
-            return;
-        }
-
-        let sender = deletedMsg.sender;
-        let chatName = chatId.endsWith("@g.us") ? `(Group Chat)` : "(Private Chat)";
-
-        let xtipes = moment(deletedMsg.timestamp * 1000).tz(`${timezones}`).locale('en').format('HH:mm z');
-        let xdptes = moment(deletedMsg.timestamp * 1000).tz(`${timezones}`).format("DD/MM/YYYY");
-
-        let replyText = `👨‍💻 *『 𝗗𝗘𝗟𝗘𝗧𝗘𝗗 𝗠𝗔𝗦𝗦𝗔𝗚𝗘 𝗗𝗘𝗧𝗘𝗖𝗧𝗘𝗗 』!* 🤓
-${readmore}
-𝙲𝙷𝙰𝚃: ${chatName}
-𝚂𝙴𝙽𝚃 𝙱𝚈: @${sender.split('@')[0]} 
-𝚃𝙸𝙼𝙴 𝚂𝙴𝙽𝚃: ${xtipes}
-𝙳𝙰𝚃𝙴 𝚂𝙴𝙽𝚃: ${xdptes}
-𝙳𝙴𝙻𝙴𝚃𝙴𝙳 𝙱𝚈: @${deletedBy.split('@')[0]}
-
-𝙼𝙴𝚂𝚂𝙰𝙶𝙴: ${deletedMsg.text}`;
-
-        let quotedMessage = {
-            key: {
-                remoteJid: chatId,
-                fromMe: sender === Cypher.user.id,
-                id: messageId,
-                participant: sender
-            },
-            message: {
-                conversation: deletedMsg.text 
-            }
-        };
-
-await Cypher.sendMessage(m.chat, { text: replyText, mentions: [sender, deletedBy] }, { quoted: quotedMessage });
-
-    } catch (err) {
-        console.error("❌ Error processing deleted message:", err);
-    }
-} 
+  
 //<================================================>//
-if (
-    global.antiedit === 'private' &&
-    (m.message?.protocolMessage?.editedMessage?.conversation || 
-    m.message?.protocolMessage?.editedMessage?.extendedTextMessage?.text)
-) {
-    try {
-        let messageId = m.message.protocolMessage.key.id;
-        let chatId = m.chat;
-        let editedBy = m.sender;
-
-        let storedMessages = loadStoredMessages();
-        let originalMsg = storedMessages[chatId]?.[messageId];
-
-        if (!originalMsg) {
-            console.log("⚠️ Original message not found in store.json.");
-            return;
-        }
-
-        let sender = originalMsg.sender;
-        let chatName = chatId.endsWith("@g.us") ? "(Group Chat)" : "(Private Chat)";
-
-        let xtipes = moment(originalMsg.timestamp * 1000).tz(`${timezones}`).locale('en').format('HH:mm z');
-        let xdptes = moment(originalMsg.timestamp * 1000).tz(`${timezones}`).format("DD/MM/YYYY");
-
-        let replyText = `👨‍💻 *『 𝗘𝗗𝗜𝗧𝗘𝗗 𝗠𝗔𝗦𝗦𝗔𝗚𝗘 𝗗𝗘𝗧𝗘𝗖𝗧𝗘𝗗 』!* 🤓
-${readmore}
-𝙲𝙷𝙰𝚃: ${chatName}
-𝚂𝙴𝙽𝚃 𝙱𝚈: @${sender.split('@')[0]} 
-𝚂𝙴𝙽𝚃 𝙾𝙽: ${xtipes}
-𝙳𝙰𝚃𝙴 𝚂𝙴𝙽𝚃: ${xdptes}
-𝙴𝙳𝙸𝚃𝙴𝙳 𝙱𝚈: @${editedBy.split('@')[0]}
-
-𝙾𝚁𝙸𝙶𝙸𝙽𝙰𝙻 𝙼𝚂𝙶: ${originalMsg.text}
-
-𝙴𝙳𝙸𝚃𝙴𝙳 𝚃𝙾: ${m.message.protocolMessage?.editedMessage?.conversation || m.message.protocolMessage?.editedMessage?.extendedTextMessage?.text}`
-
-        let quotedMessage = {
-            key: {
-                remoteJid: chatId,
-                fromMe: sender === Cypher.user.id,
-                id: messageId,
-                participant: sender
-            },
-            message: {
-                conversation: originalMsg.text 
-            }
-        };
-
-        await Cypher.sendMessage(Cypher.user.id, { text: replyText, mentions: [sender, editedBy] }, { quoted: quotedMessage });
-
-    } catch (err) {
-        console.error("❌ Error processing edited message:", err);
-    }
-} else if (
-    global.antiedit === 'chat' &&
-    (m.message?.protocolMessage?.editedMessage?.conversation || 
-    m.message?.protocolMessage?.editedMessage?.extendedTextMessage?.text)
-) {
-    try {
-        let messageId = m.message.protocolMessage.key.id;
-        let chatId = m.chat;
-        let editedBy = m.sender;
-
-        let storedMessages = loadStoredMessages();
-        let originalMsg = storedMessages[chatId]?.[messageId];
-
-        if (!originalMsg) {
-            console.log("⚠️ Original message not found in store.json.");
-            return;
-        }
-
-        let sender = originalMsg.sender;
-        let chatName = chatId.endsWith("@g.us") ? "(Group Chat)" : "(Private Chat)";
-
-        let xtipes = moment(originalMsg.timestamp * 1000).tz(`${timezones}`).locale('en').format('HH:mm z');
-        let xdptes = moment(originalMsg.timestamp * 1000).tz(`${timezones}`).format("DD/MM/YYYY");
-
-        let replyText = `👨‍💻 *『 𝗘𝗗𝗜𝗧𝗘𝗗 𝗠𝗔𝗦𝗦𝗔𝗚𝗘 𝗗𝗘𝗧𝗘𝗖𝗧𝗘𝗗 』!* 🤓
-${readmore}
-𝙲𝙷𝙰𝚃: ${chatName}
-𝚂𝙴𝙽𝚃 𝙱𝚈: @${sender.split('@')[0]} 
-𝚂𝙴𝙽𝚃 𝙾𝙽: ${xtipes}
-𝙳𝙰𝚃𝙴 𝚂𝙴𝙽𝚃: ${xdptes}
-𝙴𝙳𝙸𝚃𝙴𝙳 𝙱𝚈: @${editedBy.split('@')[0]}
-
-𝙾𝚁𝙸𝙶𝙸𝙽𝙰𝙻 𝙼𝚂𝙶: ${originalMsg.text}
-
-𝙴𝙳𝙸𝚃𝙴𝙳 𝚃𝙾: ${m.message.protocolMessage?.editedMessage?.conversation || m.message.protocolMessage?.editedMessage?.extendedTextMessage?.text}`;
-
-        let quotedMessage = {
-            key: {
-                remoteJid: chatId,
-                fromMe: sender === Cypher.user.id,
-                id: messageId,
-                participant: sender
-            },
-            message: {
-                conversation: originalMsg.text 
-            }
-        };
-
-        await Cypher.sendMessage(m.chat, { text: replyText, mentions: [sender, editedBy] }, { quoted: quotedMessage });
-
-    } catch (err) {
-        console.error("❌ Error processing edited message:", err);
-    }
-}
-
   // Handle error
   const unhandledRejections = new Map();
   process.on("unhandledRejection", (reason, promise) => {
@@ -920,9 +704,19 @@ client.ev.on("group-participants.update", async (m) => {
       console.log(color(`Congrats, ${botname} has successfully connected to this server`, "green"));
       console.log(color("Follow me on github as Ignatiusperez", "red"));
       console.log(color("Text the bot number with menu to check my command list"));
-      client
-        .sendMessage(client.user.id, { text: `Successfully connected » To »【${botname}】` })
-        .catch((error) => console.error("Could not send the startup notice:", error.message || error));
+      
+      (async () => {
+        const self = client.decodeJid(client.user.id);
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          try {
+            await new Promise((resolve) => setTimeout(resolve, attempt === 1 ? 3000 : 5000));
+            await client.sendMessage(self, { text: `Successfully connected » To »【${botname}】` });
+            return;
+          } catch (error) {
+            console.error(`Could not send the startup notice (attempt ${attempt}):`, error.message || error);
+          }
+        }
+      })();
     }
     // console.log('Connected...', update)
   });
