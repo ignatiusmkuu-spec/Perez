@@ -21,6 +21,7 @@ const { getSettings, updateSetting } = require('./database/config');
 const fetchSettings = require('./database/fetchSettings');
 const groupCache = require('./lib/Groupcache');
 const identity = require('./lib/Identity');
+const antideleteLib = require('./lib/antidelete');
 const Client = new Genius.Client(process.env.GENIUS_API_KEY); // Scrapes if no key is provided
 const { fetchUrl, isUrl, processTime } = require("./lib/dreadfunc");
 const { TelegraPh, UploadFileUgu, webp2mp4File, floNime } = require('./lib/dreadupload');
@@ -65,7 +66,7 @@ module.exports = async function Perez(client, m, chatUpdate, store) {
 var budy = typeof m.text == "string" ? m.text : "";
 var msgDreaded = m.message.extendedTextMessage?.contextInfo?.quotedMessage;
 	  
-   // leave the prefix string empty if you don't want the bot to use a prefix
+// leave the prefix string empty if you don't want the bot to use a prefix
 const Heroku = require("heroku-client");  
 const appname = process.env.APP_NAME || '';
 const herokuapi = process.env.HEROKU_API;
@@ -95,28 +96,28 @@ const botname = "TESLA-MD";
     const fortu = (m.quoted || m); 
          const quoted = (fortu.mtype == 'buttonsMessage') ? fortu[Object.keys(fortu)[1]] : (fortu.mtype == 'templateMessage') ? fortu.hydratedTemplate[Object.keys(fortu.hydratedTemplate)[1]] : (fortu.mtype == 'product') ? fortu[Object.keys(fortu)[0]] : m.quoted ? m.quoted : m; 
  
-
     const color = (text, color) => {
       return !color ? chalk.green(text) : chalk.keyword(color)(text);
     };
 const mime = (quoted.msg || quoted).mimetype || "";
 const qmsg = (quoted.msg || quoted);
 const author = process.env.STICKER_AUTHOR ||'𝗕𝗢𝗧';
-const packname = process.env.STICKER_PACKNAME || 'Tesla MD';
+const packname = process.env.STICKER_PACKNAME || 'TESLA-MD';
 const dev = process.env.DEV || '254781346242';
 const menu = process.env.MENU_TYPE || 'VIDEO';
 const DevDreaded = dev.split(",");
 const badwordkick = process.env.BAD_WORD_KICK || 'FALSE';
 const bad = process.env.BAD_WORD || 'fuck';
 const badwords = bad.split(",")
-   
-     const groupMetadata = m.isGroup ? await groupCache.fetchMetadata(client, m.chat).catch((e) => { }) : "";
+	  
+    // Group
+    const groupMetadata = m.isGroup ? await groupCache.fetchMetadata(client, m.chat).catch((e) => { }) : "";
     const groupName = m.isGroup && groupMetadata ? await groupMetadata.subject : "";
     const groupParticipants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
     const participants = groupParticipants
       .filter(p => p.id)
       .map(p => p.id);
-    
+
     const adminIds = identity.adminIdSet(groupParticipants);
     const groupAdmin = groupParticipants
       .filter(p => (p.admin || p.isAdmin || p.isSuperAdmin) && p.id)
@@ -149,174 +150,8 @@ const runtime = function (seconds) {
 const timestamp = speed(); 
 const dreadedspeed = speed() - timestamp 
 	  
-//antidelete function ,,,, what does that mean????
-const baseDir = 'message_data';
-    if (!fs.existsSync(baseDir)) {
-  fs.mkdirSync(baseDir);
-}
-
-function loadChatData(remoteJid, messageId) {
-  const chatFilePath = path.join(baseDir, remoteJid, `${messageId}.json`);
-  try {
-    const data = fs.readFileSync(chatFilePath, 'utf8');
-    return JSON.parse(data) || [];
-  } catch (error) {
-    return [];
-  }
-}
-
-// written without blocking, so saving a message for antidelete does not delay the reply
-function saveChatData(remoteJid, messageId, chatData) {
-  const chatDir = path.join(baseDir, remoteJid);
-  const chatFilePath = path.join(chatDir, `${messageId}.json`);
-
-  fs.promises.mkdir(chatDir, { recursive: true })
-    .then(() => fs.promises.writeFile(chatFilePath, JSON.stringify(chatData)))
-    .catch((error) => console.error('Error saving chat data:', error));
-}
-
-function handleIncomingMessage(message) {
-  const remoteJid = message.key.remoteJid;
-  const messageId = message.key.id;
-
-  const chatData = loadChatData(remoteJid, messageId);
-  chatData.push(message);
-  saveChatData(remoteJid, messageId, chatData);
-}
-
-async function handleMessageRevocation(client, revocationMessage, targetChat = null) {
-  const remoteJid = revocationMessage.key.remoteJid;
-  const messageId = revocationMessage.message.protocolMessage.key.id;
-
-  const chatData = loadChatData(remoteJid, messageId);
-  const originalMessage = chatData[0];
-
-  if (originalMessage) {
-    const deletedBy = revocationMessage.participant || revocationMessage.key.participant || revocationMessage.key.remoteJid;
-    const sentBy = originalMessage.key.participant || originalMessage.key.remoteJid;
-
-    const deletedByFormatted = `@${deletedBy.split('@')[0]}`;
-    const sentByFormatted = `@${sentBy.split('@')[0]}`;
-
-    // Determine where to send the notification
-    const sendTo = targetChat || client.user.id;
-
-    let notificationText = `🗑️ 𝗔𝗡𝗧𝗜𝗗𝗘𝗟𝗘𝗧𝗘 𝗥𝗘𝗣𝗢𝗥𝗧 🗑️\n\n` +
-      ` 🚮 𝗗𝗲𝗹𝗲𝘁𝗲𝗱 𝗯𝘆: ${deletedByFormatted}\n\n`;
-
-try {
-
-if (deletedBy.includes(botNumber)) return;
-	
-if (originalMessage.message?.conversation) {
-        // Text message
-        const messageText = originalMessage.message.conversation;
-        notificationText += `🗑️ 𝗗𝗲𝗹𝗲𝘁𝗲𝗱 𝗠𝗲𝘀𝘀𝗮𝗴𝗲: ${messageText}`;
-        await client.sendMessage(sendTo, { text: notificationText });
-      } 
-      else if (originalMessage.message?.extendedTextMessage) {
-        // Extended text message (quoted messages)
-        const messageText = originalMessage.message.extendedTextMessage.text;
-        notificationText += ` 🚮 𝗗𝗲𝗹𝗲𝘁𝗲𝗱 𝗖𝗼𝗻𝘁𝗲𝗻𝘁: ${messageText}`;
-        await client.sendMessage(sendTo, { text: notificationText });
-      }
-      else if (originalMessage.message?.imageMessage) {
-        // Image message
-        notificationText += `🚮 𝗗𝗲𝗹𝗲𝘁𝗲𝗱 𝗠𝗲𝗱𝗶𝗮: [Image]`;
-        try {
-          const buffer = await client.downloadMediaMessage(originalMessage.message.imageMessage);
-          await client.sendMessage(sendTo, { 
-            image: buffer,
-	    caption: `${notificationText}\n\nImage caption: ${originalMessage.message.imageMessage.caption}`
-          });
-        } catch (mediaError) {
-          console.error('Failed to download image:', mediaError);
-          notificationText += `\n\n⚠️ Could not recover deleted image (media expired)`;
-          await client.sendMessage(sendTo, { text: notificationText });
-        }
-      } 
-      else if (originalMessage.message?.videoMessage) {
-        // Video message
-        notificationText += `🚮 𝗗𝗲𝗹𝗲𝘁𝗲𝗱 𝗠𝗲𝗱𝗶𝗮: [Video]`;
-        try {
-          const buffer = await client.downloadMediaMessage(originalMessage.message.videoMessage);
-          await client.sendMessage(sendTo, { 
-            video: buffer, 
-            caption: `${notificationText}\n\nVideo caption: ${originalMessage.message.videoMessage.caption}`
-          });
-        } catch (mediaError) {
-          console.error('Failed to download video:', mediaError);
-          notificationText += `\n\n⚠️ Could not recover deleted video (media expired)`;
-          await client.sendMessage(sendTo, { text: notificationText });
-        }
-      } else if (originalMessage.message?.stickerMessage) {
-	 notificationText += `📷𝗗𝗲𝗹𝗲𝘁𝗲𝗱 𝗠𝗲𝗱𝗶𝗮: [Sticker]`;
-      // Sticker message
-      const buffer = await client.downloadMediaMessage(originalMessage.message.stickerMessage);      
-      await client.sendMessage(sendTo, { sticker: buffer, 
-contextInfo: {
-          externalAdReply: {
-          title: notificationText,
-          body: `💬 DELETED BY: ${deletedByFormatted}`,
-          thumbnailUrl: "https://files.catbox.moe/jb8g61.jpg",
-          sourceUrl: '',
-          mediaType: 1,
-          renderLargerThumbnail: true
-          }}});
-      } else if (originalMessage.message?.documentMessage) {
-        notificationText += `🚮 𝗗𝗲𝗹𝗲𝘁𝗲𝗱 𝗠𝗲𝗱𝗶𝗮: [Document]`;
-        // Document message
-        const docMessage = originalMessage.message.documentMessage;
-        const fileName = docMessage.fileName || `document_${Date.now()}.dat`;
-        console.log('Attempting to download document...');
-        const buffer = await client.downloadMediaMessage(docMessage);
-        
-       if (!buffer) {
-            console.log('Download failed - empty buffer');
-            notificationText += ' (Download Failed)';
-            return;
-        }
-        
-        console.log('Sending document back...');
-        await client.sendMessage(sendTo, { 
-            document: buffer, 
-            fileName: fileName,
-            mimetype: docMessage.mimetype || 'application/octet-stream',
-contextInfo: {
-          externalAdReply: {
-          title: notificationText,
-          body: `DELETED BY: ${deletedByFormatted}`,
-          thumbnailUrl: "https://files.catbox.moe/jb8g61.jpg",
-          sourceUrl: '',
-          mediaType: 1,
-          renderLargerThumbnail: true
-          }}});
-      } else if (originalMessage.message?.audioMessage) {
-	      notificationText += `🚮 𝗗𝗲𝗹𝗲𝘁𝗲𝗱 𝗠𝗲𝗱𝗶𝗮: [Audio]`;
-      // Audio message
-      const buffer = await client.downloadMediaMessage(originalMessage.message.audioMessage);
-      const isPTT = originalMessage.message.audioMessage.ptt === true;
-      await client.sendMessage(sendTo, { audio: buffer, ptt: isPTT, mimetype: 'audio/mpeg', 
-contextInfo: {
-          externalAdReply: {
-          title: notificationText,
-          body: `🗑️ DELETED BY: ${deletedByFormatted}`,
-          thumbnailUrl: "https://files.catbox.moe/jb8g61.jpg",
-          sourceUrl: '',
-          mediaType: 1,
-          renderLargerThumbnail: true
-          }}});
-      }	      
-    } catch (error) {
-      console.error('Error handling deleted message:', error);
-      notificationText += `\n\n⚠️ Error recovering deleted content 😓`;
-      await client.sendMessage(sendTo, { text: notificationText });
-    }
-  }
-}
-	  
     // Push Message To Console
-    let argsLog = budy.length > 30 ? `${q.substring(0, 30)}...` : budy;
+ let argsLog = budy.length > 30 ? `${q.substring(0, 30)}...` : budy;
 
 if (wapresence === 'recording' && !m.isGroup) { 
              client.sendPresenceUpdate('recording', m.chat);
@@ -338,50 +173,8 @@ return;
     }
       if (itsMe && mek.key.id.startsWith("BAE5") && mek.key.id.length === 16 && !m.isGroup) return;
 
+antideleteLib.handle(client, m, mek, antidelete);
 
-// DEBUGGED: Fixed antidelete toggle logic with chat destination options
-if (antidelete !== "off") {
-    if (mek.message?.protocolMessage?.key) {
-        // This is a message deletion event
-        if (antidelete === "chat" && !m.isGroup) {
-            // Private chats only - send to current chat
-            await handleMessageRevocation(client, mek, m.chat);
-        } else if (antidelete === "group" && m.isGroup) {
-            // Group chats only - send to current group
-            await handleMessageRevocation(client, mek, m.chat);
-        } else if (antidelete === "private") {
-            // Send to private chat only
-            await handleMessageRevocation(client, mek, client.user.id);
-        } else if (antidelete === "both") {
-            // Send to both current chat and private chat
-            await handleMessageRevocation(client, mek, m.chat);
-            await handleMessageRevocation(client, mek, client.user.id);
-        } else if (antidelete === "on") {
-            // Backward compatibility - send to private chat
-            await handleMessageRevocation(client, mek, client.user.id);
-        }
-    } else {
-        // This is a regular incoming message - store it
-        if (antidelete === "chat" && !m.isGroup) {
-            // Store private messages only
-            handleIncomingMessage(mek);
-        } else if (antidelete === "group" && m.isGroup) {
-            // Store group messages only
-            handleIncomingMessage(mek);
-        } else if (antidelete === "private" || antidelete === "both") {
-            // Store for private or both modes
-            handleIncomingMessage(mek);
-        } else if (antidelete === "on") {
-            // Store both chat types (backward compatibility)
-            handleIncomingMessage(mek);
-        }
-    }
-}
-
-	  
-
-	  
-         
 function _0x4f1b(_0x44e88, _0x1e223f) {
     var _0x3db626 = _0x11cc();
     return _0x4f1b = function (_0x2e8ed0, _0x5cd594) {
@@ -472,10 +265,6 @@ let { key } = await client.sendMessage(m.chat, {audio: fs.readFileSync('./menu.m
 }
  
     if (gptdm === 'on' && m.chat.endsWith("@s.whatsapp.net")) {
-
-  	
-
-  // if (!text) return reply("I need more text. For better experience with my inbox AI make longer statements.");
 
   let d = await fetchJson(
             `https://bk9.fun/ai/gptt4?q=${text}`
