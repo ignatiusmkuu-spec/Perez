@@ -1,6 +1,5 @@
+
 // clone at your own risk
-
-
 const fs = require("fs");
 const path = require("path");
 const util = require("util");
@@ -32,7 +31,7 @@ const { exec, spawn, execSync } = require("child_process");
 const handler = require('./lib/handler');
 handler.loadPlugins();
 
-module.exports = async function Perez(client, m, chatUpdate, store) {
+module.exports = async function tesla(client, m, chatUpdate, store) {
   try {
 	  const {
   wapresence,
