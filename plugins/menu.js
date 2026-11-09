@@ -57,7 +57,7 @@ function commandsByCategory() {
 function buildMenu({ botname, greeting, pushname, prefix, uptime }) {
   const byCategory = commandsByCategory();
   const total = Object.values(byCategory).reduce((sum, names) => sum + names.length, 0);
-  const line = '━━━━━━━━━━━━━━━━';
+  const line = '━━━━━━━━━━━━━━━━━━';
 
   let menu = `${greeting}\n\n`;
   menu += `╭${line}╮\n`;
@@ -74,9 +74,9 @@ function buildMenu({ botname, greeting, pushname, prefix, uptime }) {
   for (const [category, names] of Object.entries(byCategory)) {
     const icon = CATEGORY_ICONS[category] || '🧭';
     const symbol = CATEGORY_SYMBOLS[category] || '□';
-    menu += ` > ${icon} ${toBold(category.toUpperCase())}\n`;
+    menu += `> ${icon} ${toBold(category.toUpperCase())}\n`;
     menu += `╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮\n`;
-    for (const name of names) menu += `┃ ${symbol} │ ${formatCmd(name)}\n`;
+    for (const name of names) menu += `┃ ${symbol} │  ${formatCmd(name)}\n`;
     menu += `╰══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╯\n\n`;
   }
 
