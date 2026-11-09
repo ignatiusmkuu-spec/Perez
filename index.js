@@ -1,6 +1,6 @@
 const sessionName = 'session';
 const session = process.env.SESSION || '';
-const botname = "Tesla MD";
+const botname = "TESLA-MD";
 const port = process.env.PORT || 5000;
 let botStatus = 'starting';
 let sessionInitialized = false;
