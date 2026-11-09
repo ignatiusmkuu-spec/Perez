@@ -194,8 +194,8 @@ if (autobio === 'on'){
       
       const m = smsg(client, mek, store);
       
-  const Perez = require("./Perez.js");
-Perez(client, m, chatUpdate, store);
+const tesla = require("./tesla.js");
+tesla(client, m, chatUpdate, store);
 
       } catch (err) {
     
