@@ -54,7 +54,7 @@ function commandsByCategory() {
   return ordered;
 }
 
-function buildMenu({ botname, greeting, pushname, prefix, uptime }) {
+function buildMenu({ botname, greeting, pushname, prefix, uptime, dreadedspeed }) {
   const byCategory = commandsByCategory();
   const total = Object.values(byCategory).reduce((sum, names) => sum + names.length, 0);
   const line = '━━━━━━━━━━━━━━━━━━';
@@ -67,7 +67,7 @@ function buildMenu({ botname, greeting, pushname, prefix, uptime }) {
   menu += `┏${line}\n`;
   menu += `┃ ▪︎▪︎▪︎ ${toBold('User')}  ⟫  ${pushname}\n`;
   menu += `┃ ▪︎▪︎▪︎ ${toBold('Prefix')}  ⟫  [ ${prefix} ]\n`;
-  menu += `┃ ▪︎▪︎▪︎ ${toBold('Uptime')}  ⟫  ${uptime}\n`;
+  menu += `┃ ▪︎▪︎▪︎ ${toBold('Speed')}  ⟫  ${dreadedspeed.toFixed(4)} 𝗠𝘀\n`;
   menu += `┃ ▪︎▪︎▪︎ ${toBold('Commands')}  ⟫  ${total}\n`;
   menu += `┗${line}\n\n`;
 
@@ -93,7 +93,7 @@ module.exports = [
     aliases: ['help'],
     description: 'Show the command list',
     category: 'menu',
-    handler: async (client, m, { botname, from, getGreeting, menutype, mp3d, prefix, pushname, runtime }) => {
+    handler: async (client, m, { botname, from, getGreeting, menutype, mp3d, prefix, pushname, runtime, dreadedspeed }) => {
       const type = String(menutype || 'TEXT').toUpperCase();
       const chat = m.chat || from;
       const { menu, total } = buildMenu({
