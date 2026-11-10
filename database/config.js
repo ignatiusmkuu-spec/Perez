@@ -1,9 +1,4 @@
-const { Pool } = require('pg');
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
+'use strict';
 
 const defaultSettings = {
   antilink: 'on',
@@ -24,101 +19,76 @@ const defaultSettings = {
   wapresence: 'online'
 };
 
-async function initializeDatabase() {
-  const client = await pool.connect();
-  console.log("📡 Connecting to PostgreSQL...");
+const jsonStore = require('./jsonStore');
+let store = null;
 
-  try {
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS bot_settings (
-        id SERIAL PRIMARY KEY,
-        key TEXT UNIQUE NOT NULL,
-        value TEXT NOT NULL
-      );
-    `);
-
-    for (const [key, value] of Object.entries(defaultSettings)) {
-      await client.query(
-        `INSERT INTO bot_settings (key, value)
-         VALUES ($1, $2)
-         ON CONFLICT (key) DO NOTHING;`,
-        [key, value]
-      );
-    }
-
-    console.log("✅ Database initialized.");
-  } catch (err) {
-    console.error("❌ Database initialization failed:", err.message || err);
-    throw err;
-  } finally {
-    client.release();
-  }
+function wantedStore() {
+  const type = String(process.env.DATABASE_TYPE || '').toLowerCase();
+  if (['postgres', 'postgresql', 'pg'].includes(type)) return 'postgres';
+  if (type === 'json') return 'json';
+  return process.env.DATABASE_URL ? 'postgres' : 'json';
 }
 
-// Settings are read on every incoming message, so they are cached for a short time. updateSetting()
-// clears the cache, so a change made with a command applies immediately.
+async function initializeDatabase() {
+  if (wantedStore() === 'postgres') {
+    if (!process.env.DATABASE_URL) {
+      console.error('⚠️ DATABASE_TYPE is postgres but DATABASE_URL is not set. Using the JSON file instead.');
+    } else {
+      const pgStore = require('./pgStore');
+      console.log('📡 Connecting to PostgreSQL...');
+      try {
+        await pgStore.init(defaultSettings);
+        store = pgStore;
+        console.log('✅ Database initialized (PostgreSQL).');
+        return;
+      } catch (error) {
+        console.error('❌ PostgreSQL is not available:', error.message || error);
+        console.error('⚠️ Using the JSON file instead. Settings saved there are not copied to PostgreSQL.');
+        await pgStore.close();
+      }
+    }
+  }
+  const file = await jsonStore.init(defaultSettings);
+  store = jsonStore;
+  console.log(`✅ Database initialized (JSON file: ${file}).`);
+}
+
 const SETTINGS_TTL_MS = 30 * 1000;
 let settingsCache = null;
 let settingsCachedAt = 0;
 
 async function getSettings() {
   if (settingsCache && Date.now() - settingsCachedAt < SETTINGS_TTL_MS) return { ...settingsCache };
-  const fresh = await readSettings();
-  settingsCache = fresh;
-  settingsCachedAt = Date.now();
-  return { ...fresh };
-}
-
-async function readSettings() {
-  const client = await pool.connect();
-
   try {
-    const result = await client.query(
-      `SELECT key, value FROM bot_settings WHERE key = ANY($1::text[])`,
-      [Object.keys(defaultSettings)]
-    );
-
-    const settings = {};
-    for (const row of result.rows) {
-      settings[row.key] = row.value;
-    }
-
-    return settings;
-
+    if (!store) await initializeDatabase();
+    
+    const fresh = { ...defaultSettings, ...(await store.readAll()) };
+    settingsCache = fresh;
+    settingsCachedAt = Date.now();
+    return { ...fresh };
   } catch (err) {
-    console.error("❌ Failed to fetch settings:", err.message || err);
-    throw err;
-
-  } finally {
-    client.release();
+    console.error('❌ Failed to fetch settings:', err.message || err);
+    
+    return { ...(settingsCache || defaultSettings) };
   }
 }
 
 async function updateSetting(key, value) {
-  const client = await pool.connect();
   try {
-    const validKeys = Object.keys(defaultSettings);
-    if (!validKeys.includes(key)) {
-      throw new Error(`Invalid setting key: ${key}`);
-    }
-
-    await client.query(
-      `UPDATE bot_settings SET value = $1 WHERE key = $2`,
-      [value, key]
-    );
-
-    settingsCache = null; // next read fetches the new value
+    if (!Object.keys(defaultSettings).includes(key)) throw new Error(`Invalid setting key: ${key}`);
+    if (!store) await initializeDatabase();
+    await store.set(key, String(value));
+    settingsCache = null; 
     return true;
   } catch (err) {
-    console.error("❌ Failed to update setting:", err.message || err);
+    console.error('❌ Failed to update setting:', err.message || err);
     return false;
-  } finally {
-    client.release();
   }
 }
 
 module.exports = {
   initializeDatabase,
   getSettings,
-  updateSetting
+  updateSetting,
+  defaultSettings
 };
