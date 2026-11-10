@@ -1,10 +1,11 @@
 {
   "name": "Tesla MD",
   "description": "Tesla MD WhatsApp bot",
+  "stack": "heroku-26",
   "keywords": [
     "bot",
     "whatsapp",
-    "dreaded",
+    "tesla",
     "whatsapp-stickers",
     "anime",
     "whatsapp-bot",
@@ -64,7 +65,9 @@
     }
   ],
     "addons": [
-    "heroku-postgresql"
+      {
+    "plan": "heroku-postgresql:essential-0"
+      }
     ]
     }
 
