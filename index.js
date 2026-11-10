@@ -37,6 +37,35 @@ const color = (text, color) => {
   return !color ? chalk.green(text) : chalk.keyword(color)(text);
 };
 
+function decodeSession(value) {
+  let text = String(value || "").trim().replace(/^["']+|["']+$/g, "").trim();
+  if (!text) throw new Error("SESSION is empty.");
+  text = text.replace(/^[A-Za-z0-9_-]{1,32}:~/, "");
+
+  let json;
+  if (text.startsWith("{")) {
+    json = text;
+  } else {
+    const base64 = text.replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) {
+      throw new Error('SESSION has characters that are not valid base64. Copy the whole session again, starting at the label (for example "TESLA-MD:~").');
+    }
+    json = Buffer.from(base64, "base64").toString("utf8");
+  }
+
+  let creds;
+  try {
+    creds = JSON.parse(json);
+  } catch {
+    throw new Error("SESSION could not be read. It looks cut off or changed; copy the whole session again from the session site.");
+  }
+  const missing = ["noiseKey", "signedIdentityKey", "signedPreKey", "registrationId", "advSecretKey"].filter((key) => !(key in creds));
+  if (missing.length > 0) {
+    throw new Error(`SESSION is not a WhatsApp login (missing: ${missing.join(", ")}). Generate a new session on the session site.`);
+  }
+  return json;
+}
+
 async function authenticationn() {
   const credsPath = path.join(__dirname, sessionName, "creds.json");
   const useEnvSession = process.env.NODE_ENV === "production" || session.length > 0;
@@ -57,15 +86,10 @@ async function authenticationn() {
     throw new Error("No WhatsApp session found. Set SESSION before starting the bot.");
   }
 
-  try {
-    const creds = Buffer.from(session, "base64").toString("utf8");
-    JSON.parse(creds);
-    fs.mkdirSync(path.dirname(credsPath), { recursive: true });
-    fs.writeFileSync(credsPath, creds, { encoding: "utf8", mode: 0o600 });
-    sessionInitialized = true;
-  } catch {
-    throw new Error("SESSION is invalid. It must contain base64-encoded JSON credentials.");
-  }
+  const creds = decodeSession(session);
+  fs.mkdirSync(path.dirname(credsPath), { recursive: true });
+  fs.writeFileSync(credsPath, creds, { encoding: "utf8", mode: 0o600 });
+  sessionInitialized = true;
 }
 
 function scheduleReconnect(reason) {
@@ -173,19 +197,28 @@ if (autobio === 'on'){
       if (mek.key && mek.key.remoteJid === "status@broadcast") {
 
         if (chatUpdate.type !== "notify" || mek.key.fromMe) return;
-        try {
-          const live = await fetchSettings();
-          if (live.autoview === 'on') {
+        const live = await fetchSettings();
+        if (live.autoview === 'on') {
+        
+          try {
             await client.readMessages([mek.key]);
-            if (live.autolike === 'on') {
+          } catch (error) {
+            console.log('Status view failed:', error.message || error);
+          }
+          if (live.autolike === 'on') {
+            try {
               const own = await client.decodeJid(client.user.id);
+              
               const poster = mek.key.participantAlt || mek.key.participant;
               const statusJidList = [...new Set([poster, own].filter(Boolean))];
               await client.sendMessage(mek.key.remoteJid, { react: { key: mek.key, text: '🧚' } }, { statusJidList });
+              console.log('Status liked:', poster);
+            } catch (error) {
+              console.log('Status like failed:', error.message || error);
             }
+          } else {
+            console.log('Status viewed but not liked: autolike is', live.autolike);
           }
-        } catch (error) {
-          console.log('Status view/like failed:', error.message || error);
         }
         return; 
       }
