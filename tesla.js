@@ -71,9 +71,9 @@ const appname = process.env.APP_NAME || '';
 const herokuapi = process.env.HEROKU_API;
 const cmd = body.startsWith(prefix);
 const botname = "TESLA-MD";
-  
-    const command = body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase();
-    const args = body.trim().split(/ +/).slice(1);
+	  
+const command = body.slice(prefix.length).trim().split(/ +/).shift().toLowerCase();
+const args = body.slice(prefix.length).trim().split(/ +/).slice(1);    
     const pushname = m.pushName || "No Name";
     const botNumber = await client.decodeJid(client.user.id);
     const itsMe = m.fromMe || identity.botIds(client).has(identity.bare(m.sender));
