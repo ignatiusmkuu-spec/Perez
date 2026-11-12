@@ -32,8 +32,8 @@ const CATEGORY_ICONS = {
 };
 
 const CATEGORY_SYMBOLS = {
-  settings: '○', general: '✠', group: '✧', downloads: '✦', ai: '✫', media: '◇', logos: '✪',
-  tools: '◈', fun: '❅', sports: '☆', coding: '●', owner: '✥', prank: '✬', misc: '✠',
+  settings: '●', general: '●', group: '●', downloads: '●', ai: '●', media: '●', logos: '●',
+  tools: '●', fun: '●', sports: '●', coding: '●', owner: '●', prank: '●', misc: '●',
 };
 
 function commandsByCategory() {
@@ -73,7 +73,7 @@ function buildMenu({ botname, greeting, pushname, prefix, uptime, dreadedspeed }
 
   for (const [category, names] of Object.entries(byCategory)) {
     const icon = CATEGORY_ICONS[category] || '🧭';
-    const symbol = CATEGORY_SYMBOLS[category] || '□';
+    const symbol = CATEGORY_SYMBOLS[category] || '●';
     menu += `> ${icon} ${toBold(category.toUpperCase())}\n`;
     menu += `╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮\n`;
     for (const name of names) menu += `┃ ${symbol} │  ${formatCmd(name)}\n`;
@@ -81,7 +81,7 @@ function buildMenu({ botname, greeting, pushname, prefix, uptime, dreadedspeed }
   }
 
   menu += `${line}\n`;
-  menu += `${toBoldItalic('✨️ A bot beyond the stars ✨️')}\n`;
+  menu += `${toBoldItalic('✨️A bot beyond the stars✨️')}\n`;
   menu += `${line}`;
   return { menu, total };
 }
@@ -98,7 +98,7 @@ module.exports = [
       const chat = m.chat || from;
       const { menu, total } = buildMenu({
         botname,
-        greeting: `Hey There😁, ${getGreeting()}`,
+        greeting: `Hey There, ${getGreeting()}`,
         pushname,
         prefix,
         dreadedspeed,
