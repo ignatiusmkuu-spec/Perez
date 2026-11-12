@@ -1,12 +1,45 @@
-// Downloads commands.
-// Commands: apk, facebook, gitclone, instagram, pinterest, play, play2, song, song2, tiktok, twitter, video, ytmp3, ytmp4, ytsearch
+
+
 const axios = require('axios');
 const yts = require('yt-search');
 const { fetchJson } = require('../lib/dreadfunc');
-const BASE_URL = 'https://noobs-api.top';
+const { getAudio, getVideo } = require('../lib/ytaudio');
+const { collectUrls, KEITH_HOSTS } = require('../lib/ytaudio');
+
+const CAPTION = "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗧𝗘𝗦𝗟𝗔-𝗠𝗗";
+const BROWSER = 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36';
+
+async function keithGet(path, link, accept, timeout = 60000) {
+  const failures = [];
+  for (const host of KEITH_HOSTS) {
+    try {
+      const response = await axios.get(`${host}${path}?url=${encodeURIComponent(link)}`, { timeout, validateStatus: () => true });
+      if (response.status < 200 || response.status >= 300) throw new Error(`HTTP ${response.status}`);
+      if (!accept(response.data)) throw new Error('no media in the reply');
+      return response.data;
+    } catch (error) {
+      failures.push(`${host.replace(/^https?:\/\//, '').split('.')[0]}: ${error.message || error}`);
+    }
+  }
+  throw new Error(failures.join('; '));
+}
+
+async function sendMedia(client, m, kind, url, extra = {}) {
+  const content = (source) => (kind === 'video'
+    ? { video: source, mimetype: 'video/mp4', caption: CAPTION, ...extra }
+    : { image: source, caption: CAPTION, ...extra });
+  try {
+    await client.sendMessage(m.chat, content({ url }), { quoted: m });
+  } catch (error) {
+    const download = await axios.get(url, { responseType: 'arraybuffer', timeout: 90000, headers: { 'User-Agent': BROWSER } });
+    await client.sendMessage(m.chat, content(Buffer.from(download.data)), { quoted: m });
+  }
+}
+
+const looksLikeVideo = (url) => /\.mp4(\?|$)|video/i.test(url) && !/\.(jpe?g|png|webp)(\?|$)/i.test(url);
 
 module.exports = [
-  // apk (original Perez.js lines 4386-4410)
+
   {
     command: ['apk'],
     aliases: ['app'],
@@ -25,7 +58,7 @@ module.exports = [
                     mimetype: "application/vnd.android.package-archive",
                     contextInfo: {
             externalAdReply: {
-              title: `𝗡𝗘𝗫𝗨𝗦-𝗠𝗗`,
+              title: `TESLA-𝗠𝗗`,
               body: `${tylor.BK9.name}`,
               thumbnailUrl: `${tylor.BK9.icon}`,
               sourceUrl: `${tylor.BK9.dllink}`,
@@ -39,53 +72,40 @@ module.exports = [
     },
   },
 
-  // facebook (original Perez.js lines 3300-3341)
   {
     command: ['facebook'],
     aliases: ['fb', 'fbdl'],
     description: 'Download a Facebook video',
     category: 'downloads',
     handler: async (client, m, { text }) => {
-    {
-    if (!text) {
-            return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝗳𝗮𝗰𝗲𝗯𝗼𝗼𝗸 𝗹𝗶𝗻𝗸 !");
-        }
-
-        if (!text.includes("facebook.com")) {
-            return m.reply("That is not a facebook link.");
-        }
-
+      const link = (text || '').trim();
+      if (!/^https?:\/\//i.test(link)) return m.reply('Provide a valid Facebook video link!');
+      try {
+        let videoUrl = null;
         try {
-                    let data = await fetchJson(`https://api.dreaded.site/api/facebook?url=${text}`);
-
-            if (!data || data.status !== 200 || !data.facebook || !data.facebook.sdVideo) {
-                return m.reply("𝗦𝗼𝗿𝗿𝘆 𝘁𝗵𝗲 𝗔𝗣𝗜 𝗱𝗶𝗱𝗻'𝘁 𝗿𝗲𝘀𝗽𝗼𝗻𝗱 𝗰𝗼𝗿𝗿𝗲𝗰𝘁𝗹𝘆. 𝗣𝗹𝗲𝗮𝘀𝗲 𝘁𝗿𝘆 𝗔𝗴𝗮𝗶𝗻 𝗹𝗮𝘁𝗲𝗿!");
-            }
-
-            const fbvid = data.facebook.sdVideo;
-
-            if (!fbvid) {
-                return m.reply("Wrong facebook data. Please ensure the video exists.");
-            }
-
-            await client.sendMessage(
-                m.chat,
-                {
-                    video: { url: fbvid },
-                    caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗡𝗘𝗫𝗨𝗦-𝗠𝗗",
-                    gifPlayback: false,
-                },
-                { quoted: m }
-            );
-        } catch (e) {
-            console.error("Error occurred:", e);
-            m.reply("An error occurred. API might be down. Error: " + e.message);
+          const data = await keithGet('/download/fbdown', link, (d) => d && d.result && d.result.media && (d.result.media.hd || d.result.media.sd));
+          videoUrl = data.result.media.hd || data.result.media.sd;
+        } catch (error) {
+          console.error('[FB] Keith API failed:', error.message || error);
         }
+        if (!videoUrl) {
+          try {
+            const response = await axios.get(`https://api.bk9.dev/download/fb?url=${encodeURIComponent(link)}`, { timeout: 40000 });
+            const bk9 = response.data && response.data.BK9;
+            videoUrl = bk9 && (bk9.hd || bk9.sd || bk9.url || (typeof bk9 === 'string' ? bk9 : null));
+          } catch (error) {
+            console.error('[FB] bk9 failed:', error.message || error);
+          }
+        }
+        if (!videoUrl) return m.reply('Failed to fetch the Facebook video. Make sure the link is public and valid.');
+        await sendMedia(client, m, 'video', videoUrl);
+      } catch (error) {
+        console.error('[FB] Error:', error.message || error);
+        m.reply('Error downloading the Facebook video.');
+      }
     }
-    },
   },
 
-  // gitclone (original Perez.js lines 2310-2321)
   {
     command: ['gitclone'],
     aliases: [],
@@ -106,105 +126,100 @@ module.exports = [
     },
   },
 
-  // instagram (original Perez.js lines 3231-3269)
   {
     command: ['instagram'],
-    aliases: ['igdl', 'ig'],
-    description: 'Download an Instagram video',
+    aliases: ['igdl', 'ig', 'insta'],
+    description: 'Download an Instagram photo, video or reel',
     category: 'downloads',
-    handler: async (client, m, { botname, text }) => {
-    {
-
-    const { igdl } = require("ruhend-scraper");
-
-      if (!text) {
-        return m.reply("Please provide an Instagram link for the video.");
-      }
-
-      if (!text.includes('https://www.instagram.com/')) {
-        return m.reply("That is not a valid Instagram link.");
-      }
-
+    handler: async (client, m, { text }) => {
+      const link = ((text || '').trim().split(/\s+/).find((word) => /instagram\.com/i.test(word)) || '').trim();
+      if (!link) return m.reply('Provide an Instagram link.\nExample: .ig https://www.instagram.com/p/xxxxx');
       try {
+        let clean = link;
+        try {
+          const parsed = new URL(link);
+          clean = `${parsed.origin}${parsed.pathname}`.replace(/\/?$/, '/');
+        } catch (error) { }
+        const isReel = /\/(reel|reels|tv)\//i.test(clean);
 
-        const downloadData = await igdl(text);
+        const fromKeith = (path) => async () => {
+          const data = await keithGet(path, clean, (d) => collectUrls(d).some((u) => !/instagram\.com\//i.test(u)), 100000);
+          return collectUrls(data).filter((u) => !/^https?:\/\/(www\.)?instagram\.com\//i.test(u));
+        };
+        const fromBk9 = (endpoint) => async () => {
+          const response = await axios.get(`https://api.bk9.dev/download/${endpoint}?url=${encodeURIComponent(clean)}`, { timeout: 40000 });
+          if (!response.data || !response.data.status || !response.data.BK9) throw new Error('unsuccessful reply');
+          return collectUrls(response.data.BK9);
+        };
 
-        if (!downloadData || !downloadData.data || downloadData.data.length === 0) {
-          return m.reply("No video found at the provided link.");
+        const attempts = [fromKeith('/download/instagramdl'), fromKeith('/download/instadl'), fromBk9('instagram'), fromBk9('instagram2')]
+          .map((run) => run().then((urls) => {
+            if (urls.length === 0) throw new Error('no media');
+            const items = [...new Set(urls)].map((url) => ({ url, isVideo: looksLikeVideo(url) }));
+            if (isReel && !items.some((item) => item.isVideo)) throw new Error('only a thumbnail was returned for a reel');
+            return items;
+          }));
+
+        let items;
+        try {
+          items = await Promise.any(attempts);
+        } catch (error) {
+          console.error('[IG] every source failed:', (error.errors || []).map((e) => e.message).join('; '));
+          return m.reply('Failed to fetch the Instagram media. Make sure the post is public and the link is correct, then try again in a minute.');
         }
 
-        const videoData = downloadData.data;
-        for (let i = 0; i < Math.min(20, videoData.length); i++) {
-          const video = videoData[i];
-          const videoUrl = video.url;
+        const seen = new Set();
+        items = items.filter((item) => {
+          let key = item.url;
+          try { key = new URL(item.url).pathname; } catch (error) { }
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        if (isReel) items = [items.find((item) => item.isVideo)];
 
-          await client.sendMessage(m.chat, {
-            video: { url: videoUrl },
-            mimetype: "video/mp4",
-            caption: `DOWNLOADED BY ${botname}`
-          },{ quoted: m });
+        for (const item of items.slice(0, 10)) {
+          await sendMedia(client, m, item.isVideo ? 'video' : 'image', item.url);
         }
       } catch (error) {
-        console.error(error);
-        return m.reply("An error occurred while processing the request.");
+        console.error('[IG] Error:', error.message || error);
+        m.reply('Error downloading the Instagram media.');
       }
     }
-    },
   },
 
-  // pinterest (original Perez.js lines 3764-3807)
   {
     command: ['pinterest'],
-    aliases: ['pin'],
+    aliases: ['pin', 'pindl'],
     description: 'Download Pinterest media',
     category: 'downloads',
-    handler: async (client, m, { mek, reply, text }) => {
-    {
-    	if (!text) return reply('𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝗽𝗶𝗻𝘁𝗲𝗿𝗲𝘀𝘁 𝗹𝗶𝗻𝗸 !');
-
-    if (!text.includes("pin.it")) {
-            return m.reply("That is not a pinterest link.");
+    handler: async (client, m, { text }) => {
+      const link = (text || '').trim();
+      if (!/^https?:\/\//i.test(link)) return m.reply('Provide a valid Pinterest link!');
+      try {
+        let data;
+        try {
+          data = await keithGet('/download/pindl2', link, (d) => d && d.result && d.result.success && Array.isArray(d.result.medias) && d.result.medias.length > 0, 100000);
+        } catch (error) {
+          console.error('[PIN] Keith API failed:', error.message || error);
+          return m.reply('Failed to fetch the Pinterest media.');
         }
-    await client.sendMessage(m.chat, {
-          react: { text: '🔄', key: m.key }
-        });
-
-    try {
-            const pinterestUrl = text;
-            const response = await axios.get(`https://bk9.fun/download/pinterest?url=${encodeURIComponent(pinterestUrl)}`);
-
-            if (!response.data.status) {
-                return reply('Unable to fetch pinterest data.');
-            }
-
-            const media = response.data.BK9;
-            const capp = `𝑫𝑶𝑾𝑵𝑳𝑶𝑨𝑫𝑬𝑫 𝑩𝒀 𝗡𝗘𝗫𝗨𝗦 𝐁𝐎𝐓`;
-
-    if (media.length > 0) {
-                const videoUrl = media.find(item => item.url.includes('.mp4'))?.url;
-                const imageUrl = media.find(item => item.url.includes('.jpg'))?.url;
-
-    if (videoUrl) {
-                    await client.sendMessage(m.chat, { video: { url: videoUrl }, caption: capp }, { quoted: m });
-                } else
-    if (imageUrl) {
-                    await client.sendMessage(m.chat, { image: { url: imageUrl }, caption: capp }, { quoted: m });
-                } else {
-                    reply('No Video found!');
-                }
-            } else {
-                reply('No Image found.');
-            }
-        } catch (e) {
-            console.error(e);
-            await client.sendMessage(m.chat, { react: { text: '☠️', key: mek.key } });
-            reply('An error occurred while processing your request.');
+        for (const media of data.result.medias) {
+          if (!media.url) continue;
+          const isVideo = media.videoAvailable || media.extension === 'mp4';
+          try {
+            await sendMedia(client, m, isVideo ? 'video' : 'image', media.url);
+          } catch (error) {
+            console.error('[PIN] Could not send one file:', error.message || error);
+          }
         }
+      } catch (error) {
+        console.error('[PIN] Error:', error.message || error);
+        m.reply('Error downloading the Pinterest media.');
+      }
     }
-    },
   },
 
-  // play (original Perez.js lines 3546-3591)
   {
     command: ['play'],
     aliases: [],
@@ -230,23 +245,18 @@ module.exports = [
 
             const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, '');
             const fileName = `${safeTitle}.mp3`;
-            const apiURL = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(video.videoId)}&format=mp3`;
 
-            const response = await axios.get(apiURL);
-            const data = response.data;
-
-            if (!data.downloadLink) {
-              return client.sendMessage(from, {
-                text: 'Failed to retrieve the MP3 download link.'
+            const audio = await getAudio(video.url);
+            try {
+              await client.sendMessage(from, {
+                document: { url: audio.url },
+                mimetype: audio.source === 'yt-dlp' ? 'audio/mp4' : 'audio/mpeg',
+                caption: CAPTION,
+                fileName: audio.source === 'yt-dlp' ? `${safeTitle}.m4a` : fileName
               }, { quoted: m });
-    	}
-
-    await client.sendMessage(from, {
-              document: { url: data.downloadLink },
-              mimetype: 'audio/mpeg',
-    	      caption: 'ᘜᗴᑎᗴᖇᗩTᗴᗪ ᗷY ᑎᗴ᙭ᑌՏ ᗰᗪ',
-              fileName
-            }, { quoted: m });
+            } finally {
+              await audio.cleanup();
+            }
 
           } catch (err) {
             console.error('[PLAY] Error:', err);
@@ -258,7 +268,6 @@ module.exports = [
     },
   },
 
-  // play2 (original Perez.js lines 3593-3633)
   {
     command: ['play2'],
     aliases: [],
@@ -289,7 +298,7 @@ module.exports = [
             await client.sendMessage(m.chat, {
      document: {url: audioUrl },
     mimetype: "audio/mpeg",
-    caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗡𝗘𝗫𝗨𝗦-𝗠𝗗",
+    caption: CAPTION,
      fileName: filename }, { quoted: m });
 
             await client.sendMessage(
@@ -308,7 +317,6 @@ module.exports = [
     },
   },
 
-  // song (original Perez.js lines 3673-3717)
   {
     command: ['song'],
     aliases: ['music'],
@@ -334,22 +342,17 @@ module.exports = [
 
             const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, '');
             const fileName = `${safeTitle}.mp3`;
-            const apiURL = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(video.videoId)}&format=mp3`;
 
-            const response = await axios.get(apiURL);
-            const data = response.data;
-
-            if (!data.downloadLink) {
-              return client.sendMessage(from, {
-                text: 'Failed to retrieve the MP3 download link.'
+            const audio = await getAudio(video.url);
+            try {
+              await client.sendMessage(from, {
+                audio: { url: audio.url },
+                mimetype: audio.source === 'yt-dlp' ? 'audio/mp4' : 'audio/mpeg',
+                fileName: audio.source === 'yt-dlp' ? `${safeTitle}.m4a` : fileName
               }, { quoted: m });
-    	}
-
-    await client.sendMessage(from, {
-              audio: { url: data.downloadLink },
-              mimetype: 'audio/mpeg',
-              fileName
-            }, { quoted: m });
+            } finally {
+              await audio.cleanup();
+            }
 
           } catch (err) {
             console.error('[PLAY] Error:', err);
@@ -361,7 +364,6 @@ module.exports = [
     },
   },
 
-  // song2 (original Perez.js lines 4087-4161)
   {
     command: ['song2'],
     aliases: [],
@@ -372,22 +374,19 @@ module.exports = [
     		     const ytSearch = require('yt-search');
     const fetch = require('node-fetch');
 
-      // Function to attempt download from API
       const getDownloadData = async (apiUrl) => {
         const response = await fetch(apiUrl);
         return response.json();
       };
 
       try {
-        // Check if query is provided
+
         if (!text || text.trim().length === 0) {
           return m.reply('What song do you want to download ?');
         }
 
-        // Perform a YouTube search based on the query
         const searchResults = await ytSearch(text);
 
-        // Check if any videos were found
         if (!searchResults || !searchResults.videos.length) {
           return m.reply('No video found for the specified query.');
         }
@@ -396,24 +395,22 @@ module.exports = [
         const videoUrl = firstVideo.url;
     	  m.reply(`_Please wait your download on progress..._`)
 
-        // Attempt to download from different APIs
         let downloadData;
         let downloadUrl;
         let videoDetails;
 
-        // Try Gifted API
         downloadData = await getDownloadData(`https://api.giftedtech.my.id/api/download/dlmp3?url=${encodeURIComponent(videoUrl)}&apikey=gifted`);
         if (downloadData.success) {
           downloadUrl = downloadData.result.download_url;
           videoDetails = downloadData.result;
         } else {
-          // Try Yasiya API if Gifted fails
+
           downloadData = await getDownloadData(`https://www.dark-yasiya-api.site/download/ytmp3?url=${encodeURIComponent(videoUrl)}`);
           if (downloadData.success) {
             downloadUrl = downloadData.result.download_url;
             videoDetails = downloadData.result;
           } else {
-            // Try Dreaded API if both fail
+
             downloadData = await getDownloadData(`https://api.dreaded.site/api/ytdl/audio?url=${encodeURIComponent(videoUrl)}`);
             if (downloadData.success) {
               downloadUrl = downloadData.result.download_url;
@@ -422,19 +419,16 @@ module.exports = [
           }
         }
 
-        // Check if a valid download URL was found
         if (!downloadUrl || !videoDetails) {
           return m.reply('Failed to retrieve download URL from all sources. Please try again later.');
         }
 
-        // Prepare the message payload with external ad details
         const messagePayload = {
           audio: { url: downloadUrl },
           mimetype: 'audio/mp4',
           fileName: `${videoDetails.title}.mp3`
             };
 
-        // Send the download link to the user
         await client.sendMessage(m.chat, messagePayload, { quoted: m });
 
       } catch (error) {
@@ -445,7 +439,6 @@ module.exports = [
     },
   },
 
-  // tiktok (original Perez.js lines 3428-3486)
   {
     command: ['tiktok'],
     aliases: ['tikdl'],
@@ -503,7 +496,7 @@ module.exports = [
             await client.sendMessage(m.chat, {
                 video: videoBuffer,
                 mimetype: "video/mp4",
-                caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗡𝗘𝗫𝗨𝗦-𝗠𝗗",
+                caption: CAPTION,
             }, { quoted: m });
 
         } catch (error) {
@@ -513,39 +506,35 @@ module.exports = [
     },
   },
 
-  // twitter (original Perez.js lines 3272-3299)
   {
     command: ['twitter'],
-    aliases: ['twtdl'],
-    description: 'Download a Twitter/X video',
+    aliases: ['twtdl', 'xdl'],
+    description: 'Download a Twitter/X video or image',
     category: 'downloads',
     handler: async (client, m, { text }) => {
-    {
-    if (!text) return m.reply("𝗽𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝘁𝘄𝗶𝘁𝘁𝗲𝗿 𝗹𝗶𝗻𝗸 !");
-
-    try {
-
-    const data = await fetchJson(`https://api.dreaded.site/api/alldl?url=${text}`);
-
-    if (!data || data.status !== 200 || !data.data || !data.data.videoUrl) {
-                return m.reply("𝗦𝗼𝗿𝗿𝘆 𝘁𝗵𝗲 𝗔𝗣𝗜 𝗱𝗶𝗱𝗻'𝘁 𝗿𝗲𝘀𝗽𝗼𝗻𝗱 𝗰𝗼𝗿𝗿𝗲𝗰𝘁𝗹𝘆. 𝗣𝗹𝗲𝗮𝘀𝗲 𝘁𝗿𝘆 𝗔𝗴𝗮𝗶𝗻 𝗹𝗮𝘁𝗲𝗿!");
-            }
-
-    const twtvid = data.data.videoUrl;
-
-    await client.sendMessage(m.chat,{video : {url : twtvid },caption : `𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝑵𝑬𝑿𝑼𝑺 𝑴𝑫`,gifPlayback : false },{quoted : m})
-
-    } catch (e) {
-
-    m.reply("An error occured. API might be down\n" + e)
-
+      const link = (text || '').trim();
+      const tweetId = (link.match(/(?:twitter\.com|x\.com)\/.+\/status\/(\d+)/) || [])[1];
+      if (!tweetId) return m.reply('Provide a valid Twitter/X post link!\nExample: .twitter https://x.com/user/status/123456');
+      try {
+        const response = await axios.get(`https://api.fxtwitter.com/i/status/${tweetId}`, { timeout: 30000, headers: { 'User-Agent': 'Mozilla/5.0' } });
+        const tweet = response.data && response.data.tweet;
+        if (!tweet) return m.reply('Tweet not found, or it is from a private account.');
+        const media = tweet.media || {};
+        if (media.videos && media.videos.length > 0) {
+          const video = media.videos[0];
+          await sendMedia(client, m, 'video', video.url, { gifPlayback: video.type === 'gif' });
+        } else if (media.photos && media.photos.length > 0) {
+          for (const photo of media.photos) await sendMedia(client, m, 'image', photo.url);
+        } else {
+          m.reply('That post has no video or image.');
+        }
+      } catch (error) {
+        console.error('[TWITTER] Error:', error.message || error);
+        m.reply(`Failed to download: ${(error.response && error.response.data && error.response.data.message) || error.message || 'Unknown error'}`);
+      }
     }
-
-    		}
-    },
   },
 
-  // video (original Perez.js lines 4274-4354)
   {
     command: ['video'],
     aliases: [],
@@ -556,16 +545,14 @@ module.exports = [
     const axios = require('axios');
     const ytSearch = require('yt-search');
 
-      // Check if a query is provided
       if (!text) {
         return m.reply("What video do you want to download ?");
       }
 
       try {
-        // Perform a YouTube search based on the query
+
         const searchResults = await ytSearch(text);
 
-        // Check if any videos were found
         if (!searchResults || !searchResults.videos.length) {
           return m.reply('No video found for the specified query.');
         }
@@ -573,7 +560,6 @@ module.exports = [
         const firstVideo = searchResults.videos[0];
         const videoUrl = firstVideo.url;
 
-        // Function to get download data from APIs
         const getDownloadData = async (url) => {
           try {
             const response = await axios.get(url);
@@ -584,7 +570,19 @@ module.exports = [
           }
         };
 
-        // List of APIs to try
+        try {
+          const kv = await getVideo(videoUrl);
+          await client.sendMessage(m.chat, {
+            video: { url: kv.url },
+            mimetype: 'video/mp4',
+            caption: CAPTION,
+            fileName: `${kv.title || firstVideo.title}.mp4`,
+          }, { quoted: m });
+          return;
+        } catch (error) {
+          console.error('[VIDEO] Keith API failed:', error.message || error);
+        }
+
         const apis = [
           `https://api-rin-tohsaka.vercel.app/download/ytmp4?url=${encodeURIComponent(videoUrl)}`,
           `https://api.davidcyriltech.my.id/download/ytmp4?url=${encodeURIComponent(videoUrl)}`,
@@ -599,7 +597,6 @@ module.exports = [
           if (downloadData && downloadData.success) break;
         }
 
-        // Check if a valid download URL was found
         if (!downloadData || !downloadData.success) {
           return m.reply('Failed to fetch audio from the API');
         }
@@ -607,22 +604,20 @@ module.exports = [
         const downloadUrl = downloadData.result.download_url;
         const videoDetails = downloadData.result;
 
-        // Prepare the message payload with external ad details
         const messagePayload = {
           document: { url: downloadUrl },
           mimetype: 'video/mpeg',
-          caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗡𝗘𝗫𝗨𝗦-𝗠𝗗",
+          caption: CAPTION,
           fileName: `${videoDetails.title}.mp3`,
         };
 
     	const messagePaylod = {
           video: { url: downloadUrl },
           mimetype: 'video/mp4',
-          caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗡𝗘𝗫𝗨𝗦-𝗠𝗗",
+          caption: CAPTION,
           fileName: `${videoDetails.title}.mp4`,
         };
 
-        // Send the download link to the user
         await client.sendMessage(m.chat, messagePayload, { quoted: m });
 
         await client.sendMessage(m.chat, messagePaylod, { quoted: m });
@@ -635,7 +630,6 @@ module.exports = [
     },
   },
 
-  // ytmp3 (original Perez.js lines 4187-4229)
   {
     command: ['ytmp3'],
     aliases: ['yta'],
@@ -659,24 +653,20 @@ module.exports = [
             if (!videos || videos.length === 0) return m.reply("No songs found!");
 
             const urlYt = videos[0].url;
-            let data = await fetchJson(`https://api.dreaded.site/api/ytdl/audio?url=${urlYt}`);
-
-            if (!data || !data.result || !data.result.url) {
-                return m.reply("Failed to fetch audio from the API.");
+            const audio = await getAudio(urlYt);
+            try {
+                await client.sendMessage(
+                    m.chat,
+                    {
+                        audio: { url: audio.url },
+                        mimetype: audio.source === 'yt-dlp' ? "audio/mp4" : "audio/mpeg",
+                        fileName: `${audio.title || videos[0].title}.${audio.source === 'yt-dlp' ? 'm4a' : 'mp3'}`,
+                    },
+                    { quoted: m }
+                );
+            } finally {
+                await audio.cleanup();
             }
-
-            const audioUrl = data.result.url;
-    const title = data.result.title;
-
-            await client.sendMessage(
-                m.chat,
-                {
-                    audio: { url: audioUrl },
-                    mimetype: "audio/mpeg",
-                    fileName: `${title}.mp3`,
-                },
-                { quoted: m }
-            );
         } catch (error) {
             m.reply("Download failed\n" + error.message);
         }
@@ -684,7 +674,6 @@ module.exports = [
     },
   },
 
-  // ytmp4 (original Perez.js lines 4231-4273)
   {
     command: ['ytmp4'],
     aliases: ['ytv'],
@@ -706,21 +695,14 @@ module.exports = [
             if (!videos || videos.length === 0) return m.reply("No songs found!");
 
             const urlYt = videos[0].url;
-            let data = await fetchJson(`https://api.dreaded.site/api/ytdl/video?url=${urlYt}`);
-
-            if (!data || !data.result || !data.result.url) {
-                return m.reply("Failed to fetch video from the API.");
-            }
-
-            const audioUrl = data.result.url;
-    const title = data.result.title;
+            const video = await getVideo(urlYt);
 
             await client.sendMessage(
                 m.chat,
                 {
-                    video: { url: audioUrl },
-                    mimetype: "video/mpeg",
-                    fileName: `${title}.mp4`,
+                    video: { url: video.url },
+                    mimetype: "video/mp4",
+                    fileName: `${video.title || videos[0].title}.mp4`,
                 },
                 { quoted: m }
             );
@@ -731,7 +713,6 @@ module.exports = [
     },
   },
 
-  // ytsearch (original Perez.js lines 4163-4185)
   {
     command: ['ytsearch'],
     aliases: ['yts'],
