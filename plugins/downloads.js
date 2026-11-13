@@ -274,46 +274,26 @@ module.exports = [
     description: 'Download a song by name',
     category: 'downloads',
     handler: async (client, m, { text }) => {
-    {
-    		     const yts = require("yt-search");
+      const yts = require("yt-search");
+      try {
+        if (!text) return m.reply("What song do you want to download?");
 
-        try {
-            if (!text) return m.reply("What song do you want to download?");
+        const { videos } = await yts(text);
+        if (!videos || videos.length === 0) return m.reply("No songs found!");
 
-            const { videos } = await yts(text);
-            if (!videos || videos.length === 0) return m.reply("No songs found!");
-
-            const urlYt = videos[0].url;
-            let data = await fetchJson(`https://api.dreaded.site/api/ytdl/audio?url=${urlYt}`);
-
-            if (!data || !data.result || !data.result.download || !data.result.download.url) {
-                return m.reply("Failed to fetch audio from the API.");
-            }
-
-            const {
-                metadata: { title, thumbnail, duration, author },
-                download: { url: audioUrl, quality, filename },
-            } = data.result;
-
-            await client.sendMessage(m.chat, {
-     document: {url: audioUrl },
-    mimetype: "audio/mpeg",
-    caption: CAPTION,
-     fileName: filename }, { quoted: m });
-
-            await client.sendMessage(
-                m.chat,
-                {
-                    audio: { url: audioUrl },
-                    mimetype: "audio/mpeg",
-                    fileName: filename,
-                },
-                { quoted: m }
-            );
-        } catch (error) {
-            m.reply("Download failed\n" + error.message);
+        const data = await fetchJson(`https://mcow.gifted.co.ke/api/yta?url=${encodeURIComponent(videos[0].url)}`);
+        if (!data || !data.success || !data.result || !data.result.download_url) {
+          return m.reply("Failed to fetch audio from the API.");
         }
-    }
+
+        const audioUrl = data.result.download_url;
+        const fileName = `${data.result.title || videos[0].title}.mp3`;
+
+        await client.sendMessage(m.chat, { document: { url: audioUrl }, mimetype: "audio/mpeg", caption: CAPTION, fileName }, { quoted: m });
+        await client.sendMessage(m.chat, { audio: { url: audioUrl }, mimetype: "audio/mpeg", fileName }, { quoted: m });
+      } catch (error) {
+        m.reply("Download failed\n" + error.message);
+      }
     },
   },
 
@@ -364,78 +344,40 @@ module.exports = [
     },
   },
 
-  {
+    {
     command: ['song2'],
     aliases: [],
     description: 'Download a song by name',
     category: 'downloads',
     handler: async (client, m, { text }) => {
-    {
-    		     const ytSearch = require('yt-search');
-    const fetch = require('node-fetch');
-
-      const getDownloadData = async (apiUrl) => {
-        const response = await fetch(apiUrl);
-        return response.json();
-      };
-
+      const ytSearch = require('yt-search');
       try {
-
         if (!text || text.trim().length === 0) {
           return m.reply('What song do you want to download ?');
         }
 
         const searchResults = await ytSearch(text);
-
         if (!searchResults || !searchResults.videos.length) {
           return m.reply('No video found for the specified query.');
         }
 
         const firstVideo = searchResults.videos[0];
-        const videoUrl = firstVideo.url;
-    	  m.reply(`_Please wait your download on progress..._`)
+        m.reply(`_Please wait your download on progress..._`);
 
-        let downloadData;
-        let downloadUrl;
-        let videoDetails;
-
-        downloadData = await getDownloadData(`https://api.giftedtech.my.id/api/download/dlmp3?url=${encodeURIComponent(videoUrl)}&apikey=gifted`);
-        if (downloadData.success) {
-          downloadUrl = downloadData.result.download_url;
-          videoDetails = downloadData.result;
-        } else {
-
-          downloadData = await getDownloadData(`https://www.dark-yasiya-api.site/download/ytmp3?url=${encodeURIComponent(videoUrl)}`);
-          if (downloadData.success) {
-            downloadUrl = downloadData.result.download_url;
-            videoDetails = downloadData.result;
-          } else {
-
-            downloadData = await getDownloadData(`https://api.dreaded.site/api/ytdl/audio?url=${encodeURIComponent(videoUrl)}`);
-            if (downloadData.success) {
-              downloadUrl = downloadData.result.download_url;
-              videoDetails = downloadData.result;
-            }
-          }
+        const data = await fetchJson(`https://mcow.gifted.co.ke/api/yta?url=${encodeURIComponent(firstVideo.url)}`);
+        if (!data || !data.success || !data.result || !data.result.download_url) {
+          return m.reply('Failed to retrieve download URL. Please try again later.');
         }
 
-        if (!downloadUrl || !videoDetails) {
-          return m.reply('Failed to retrieve download URL from all sources. Please try again later.');
-        }
-
-        const messagePayload = {
-          audio: { url: downloadUrl },
+        await client.sendMessage(m.chat, {
+          audio: { url: data.result.download_url },
           mimetype: 'audio/mp4',
-          fileName: `${videoDetails.title}.mp3`
-            };
-
-        await client.sendMessage(m.chat, messagePayload, { quoted: m });
-
+          fileName: `${data.result.title || firstVideo.title}.mp3`,
+        }, { quoted: m });
       } catch (error) {
         console.error('Error during download process:', error);
         return m.reply(`Download failed due to an error: ${error.message || error}`);
       }
-          }
     },
   },
 
