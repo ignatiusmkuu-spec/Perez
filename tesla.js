@@ -76,7 +76,8 @@ const command = body.slice(prefix.length).trim().split(/ +/).shift().toLowerCase
 const args = body.slice(prefix.length).trim().split(/ +/).slice(1);    
     const pushname = m.pushName || "No Name";
     const botNumber = await client.decodeJid(client.user.id);
-    const itsMe = m.fromMe || identity.botIds(client).has(identity.bare(m.sender));
+    const myIds = await identity.expand(client, identity.botIds(client));
+    const itsMe0 = m.fromMe || myIds.has(identity.bare(m.sender));
     let text = (q = args.join(" "));
     const arg = budy.trim().substring(budy.indexOf(" ") + 1);
     const arg1 = arg.trim().substring(arg.indexOf(" ") + 1);
@@ -121,13 +122,18 @@ const badwords = bad.split(",")
     const groupAdmin = groupParticipants
       .filter(p => (p.admin || p.isAdmin || p.isSuperAdmin) && p.id)
       .map(p => p.id);
-    const isBotAdmin = m.isGroup ? identity.overlaps(identity.botIds(client), adminIds) : false;
-    const senderAllIds = identity.senderIds(m, mek, groupParticipants);
+    const isBotAdmin = m.isGroup ? identity.overlaps(myIds, adminIds) : false;
+    const senderAllIds = await identity.expand(client, identity.senderIds(m, mek, groupParticipants));
     const groupSender = m.isGroup
       ? ((groupParticipants.find(p => identity.participantIds(p).some(id => senderAllIds.has(id))) || {}).id || sender)
       : sender;
      const isAdmin = m.isGroup ? identity.overlaps(senderAllIds, adminIds) : false;
-     const Owner = identity.isOwner(senderAllIds, DevDreaded);
+     const ownerAlt = await identity.expand(client, identity.ownerJids(DevDreaded));
+     const itsMe = itsMe0 || identity.overlaps(senderAllIds, myIds);
+     const botJid = identity.bare(client.user.id);
+     const botLid = identity.bare(client.user.lid || '');
+     const botOwnerIds = [botJid, botLid, ...myIds].filter(Boolean);
+     const Owner = itsMe || identity.isOwner(senderAllIds, DevDreaded, [...ownerAlt, ...botOwnerIds]);
      const admin = process.env.ADMIN_MSG || '𝗖𝗼𝗺𝗺𝗮𝗻𝗱 𝗿𝗲𝘀𝗲𝗿𝘃𝗲𝗱 𝗳𝗼𝗿 𝗔𝗱𝗺𝗶𝗻𝘀!';
      const group = process.env.GROUP_ONLY_MSG || '𝗖𝗼𝗺𝗺𝗮𝗻𝗱 𝗺𝗲𝗮𝗻𝘁 𝗳𝗼𝗿 𝗚𝗿𝗼𝘂𝗽𝘀!';
      const botAdmin = process.env.BOT_ADMIN_MSG || '𝗜 𝗻𝗲𝗲𝗱 𝗔𝗱𝗺𝗶𝗻 𝗽𝗿𝗲𝘃𝗶𝗹𝗲𝗱𝗴𝗲𝘀!'
@@ -370,6 +376,7 @@ if (antilinkall === 'on' && body.includes('https://') && !Owner && isBotAdmin &&
       );
     }
 
+    if (cmd && process.env.DEBUG_IDS === 'true') console.log('IDS', JSON.stringify({ fromMe: m.fromMe, sender: m.sender, key: mek.key, me: [...myIds], senderIds: [...senderAllIds], owner: Owner, itsMe, isAdmin }));
     if (cmd) {
       const handled = await handler.dispatch(command, client, m, {
           DevDreaded, Heroku, NotOwner, Owner, admin, appname,
