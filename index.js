@@ -37,6 +37,7 @@ const color = (text, color) => {
   return !color ? chalk.green(text) : chalk.keyword(color)(text);
 };
 
+
 function decodeSession(value) {
   let text = String(value || "").trim().replace(/^["']+|["']+$/g, "").trim();
   if (!text) throw new Error("SESSION is empty.");
@@ -199,25 +200,35 @@ if (autobio === 'on'){
         if (chatUpdate.type !== "notify" || mek.key.fromMe) return;
         const live = await fetchSettings();
         if (live.autoview === 'on') {
-        
           try {
             await client.readMessages([mek.key]);
           } catch (error) {
             console.log('Status view failed:', error.message || error);
           }
-          if (live.autolike === 'on') {
-            try {
-              const own = await client.decodeJid(client.user.id);
-              
-              const poster = mek.key.participantAlt || mek.key.participant;
-              const statusJidList = [...new Set([poster, own].filter(Boolean))];
-              await client.sendMessage(mek.key.remoteJid, { react: { key: mek.key, text: '🧚' } }, { statusJidList });
-              console.log('Status liked:', poster);
-            } catch (error) {
-              console.log('Status like failed:', error.message || error);
+        }
+        
+        if (live.autolike === 'on') {
+          try {
+            let poster = mek.key.participantAlt || mek.key.participantPn;
+            if (!poster && mek.key.participant && mek.key.participant.endsWith('@lid')) {
+              try {
+                poster = await client.signalRepository.lidMapping.getPNForLID(mek.key.participant);
+              } catch (error) { /* no phone number known for this LID */ }
             }
-          } else {
-            console.log('Status viewed but not liked: autolike is', live.autolike);
+            poster = poster || mek.key.participant;
+            if (poster) {
+              const botJid = client.decodeJid(client.user.id);
+              const likeKey = {
+                remoteJid: mek.key.remoteJid,
+                id: mek.key.id,
+                fromMe: mek.key.fromMe,
+                participant: poster,
+              };
+              await client.sendMessage(mek.key.remoteJid, { react: { key: likeKey, text: '🧚' } }, { statusJidList: [poster, botJid] });
+              console.log('Status like sent to:', poster, '(as', mek.key.participant + ')');
+            }
+          } catch (error) {
+            console.log('Status like failed:', error.message || error);
           }
         }
         return; 
