@@ -415,7 +415,7 @@ module.exports = [
                         `https://api.heroku.com/apps/${appname}/builds`,
                         {
                             source_blob: {
-                                url: "https://github.com/Ignatiusperez/Perez/",
+                                url: "https://github.com/ignatiusmkuu-spec/Perez/",
                             },
                         },
                         {
