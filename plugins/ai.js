@@ -18,7 +18,7 @@ const NOT_CHAT = /whisper|orpheus|guard|safeguard|compound|tts|embed/i;
 let available = null;
 
 function groqKey() {
-  const key = process.env.GROQ_KEY || process.env.GROQ_API_KEY;
+  const key = process.env.GROQ_KEY || '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';
   if (!key) throw new Error('GROQ_KEY is not set');
   return key.trim();
 }
