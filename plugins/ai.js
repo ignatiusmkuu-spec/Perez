@@ -6,18 +6,67 @@ const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const TEXT_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 const VISION_MODEL = process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
 
-async function groq(messages, model) {
+const PREFERRED = [
+  'llama-3.3-70b-versatile',
+  'openai/gpt-oss-120b',
+  'openai/gpt-oss-20b',
+  'llama-3.1-8b-instant',
+  'qwen/qwen3-32b',
+  'moonshotai/kimi-k2-instruct-0905',
+];
+const NOT_CHAT = /whisper|orpheus|guard|safeguard|compound|tts|embed/i;
+let available = null;
+
+function groqKey() {
   const key = process.env.GROQ_KEY || process.env.GROQ_API_KEY;
   if (!key) throw new Error('GROQ_KEY is not set');
-  const response = await axios.post(
+  return key.trim();
+}
+
+async function listModels() {
+  if (available) return available;
+  const response = await axios.get(GROQ_URL.replace('/chat/completions', '/models'), {
+    headers: { Authorization: `Bearer ${groqKey()}` },
+    timeout: 30000,
+    validateStatus: () => true,
+  });
+  const ids = response.status === 200 && response.data && Array.isArray(response.data.data)
+    ? response.data.data.map((item) => item.id)
+    : [];
+  available = ids;
+  return ids;
+}
+
+async function post(messages, model) {
+  return axios.post(
     GROQ_URL,
     { model, messages, temperature: 0.7, max_completion_tokens: 1500 },
     {
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${groqKey()}`, 'Content-Type': 'application/json' },
       timeout: 60000,
       validateStatus: () => true,
     }
   );
+}
+
+const modelMissing = (response) => {
+  const error = response.data && response.data.error;
+  return response.status === 404 || (error && /model_not_found|does not exist|do not have access/i.test(`${error.code} ${error.message}`));
+};
+
+async function groq(messages, model, vision) {
+  let response = await post(messages, model);
+  if (modelMissing(response)) {
+    const ids = await listModels();
+    const usable = ids.filter((id) => !NOT_CHAT.test(id));
+    const pick = vision
+      ? usable.find((id) => /llama-4|vision|vl\b|scout|maverick/i.test(id))
+      : PREFERRED.find((id) => id !== model && usable.includes(id)) || usable.find((id) => id !== model);
+    if (!pick) {
+      throw new Error(`Model ${model} is not available to this key. Models on this key: ${ids.join(', ') || 'none found'}`);
+    }
+    response = await post(messages, pick);
+  }
   if (response.status === 401) throw new Error('Groq rejected the API key');
   if (response.status === 429) throw new Error('Groq rate limit reached, try again in a moment');
   if (response.status < 200 || response.status >= 300) {
@@ -71,7 +120,7 @@ function visionCommand(command, description) {
             { type: 'text', text },
             { type: 'image_url', image_url: { url: `data:${type};base64,${base64}` } },
           ],
-        }], VISION_MODEL);
+        }], VISION_MODEL, true);
         await m.reply(answer);
       } catch (error) {
         m.reply('I am unable to analyze images at the moment\n' + (error.message || error));
@@ -114,7 +163,8 @@ module.exports = [
     		      }
     },
   },
-  
+
+  // darkgpt (original Perez.js lines 2323-2340)
   {
     command: ['darkgpt'],
     aliases: [],
