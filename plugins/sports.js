@@ -200,7 +200,7 @@ const shortDate = (utc) => (utc ? new Date(utc).toLocaleDateString('en-GB', { da
 
 
 const FD_LEAGUES = [
-  { code: 'PL', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', name: 'Premier League' },
+  { code: 'PL', flag: '🥷', name: 'Premier League' },
   { code: 'PD', flag: '🇪🇸', name: 'La Liga' },
   { code: 'BL1', flag: '🇩🇪', name: 'Bundesliga' },
   { code: 'SA', flag: '🇮🇹', name: 'Serie A' },
@@ -214,7 +214,7 @@ const eatTime = (date) => new Intl.DateTimeFormat('en-GB', { timeZone: EAT, hour
 const eatLabel = (date) => new Intl.DateTimeFormat('en-GB', { timeZone: EAT, weekday: 'short', day: '2-digit', month: 'short' }).format(date);
 
 async function footballDataMatches(from, to) {
-  const key = process.env.FOOTBALL_DATA_KEY;
+  const key = process.env.FOOTBALL_DATA_KEY || 'd691d9463abb43198760caee962db022';
   if (!key) return null;
   const response = await axios.get('https://api.football-data.org/v4/matches', {
     params: { competitions: FD_LEAGUES.map((l) => l.code).join(','), dateFrom: from, dateTo: to },
