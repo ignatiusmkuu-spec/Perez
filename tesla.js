@@ -27,7 +27,7 @@ const { TelegraPh, UploadFileUgu, webp2mp4File, floNime } = require('./lib/dread
 const { Configuration, OpenAI } = require("openai");
 let setting = process.env.AI;
 const { smsg, formatp, tanggal, formatDate, getTime,  sleep, generateProfilePicture, clockString, fetchJson, getBuffer, jsonformat, format, parseMention, getRandom } = require('./lib/dreadfunc');
-const { exec, spawn, execSync } = require("child_process");
+const { exec, spawn, execSync, execFile } = require("child_process");
 const handler = require('./lib/handler');
 handler.loadPlugins();
 
@@ -264,10 +264,21 @@ if (budy.startsWith('>')) {
 
 
 async function mp3d () {
-	
-let { key } = await client.sendMessage(m.chat, {audio: fs.readFileSync('./menu.mp3'), mimetype:'audio/mp4'}, {quoted: m })
-
-}
+  const source = path.join(__dirname, 'menu.mp3');
+  const voice = path.join(__dirname, 'menu.ogg');
+  let note = null;
+  try {
+    if (!fs.existsSync(voice) || fs.statSync(voice).mtimeMs < fs.statSync(source).mtimeMs) {
+      await new Promise((resolve, reject) => {
+        execFile('ffmpeg', ['-y', '-i', source, '-vn', '-c:a', 'libopus', '-b:a', '48k', '-ar', '48000', '-ac', '1', '-f', 'ogg', voice], { timeout: 30000 }, (error) => (error ? reject(error) : resolve()));
+      });
+    }
+    note = { audio: fs.readFileSync(voice), mimetype: 'audio/ogg; codecs=opus', ptt: true };
+  } catch (error) {
+    note = { audio: fs.readFileSync(source), mimetype: 'audio/mpeg', ptt: true };
+  }
+  await client.sendMessage(m.chat, note, { quoted: m });
+							}
  
     if (gptdm === 'on' && m.chat.endsWith("@s.whatsapp.net")) {
 
