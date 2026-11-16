@@ -2,8 +2,8 @@ const fs = require('fs');
 const axios = require('axios');
 const FormData = require('form-data');
 const uploadToCatbox = require('../lib/catbox');
-const { webp2mp4File } = require('../lib/dreadupload');
-const { createSticker, textSticker, isAnimatedWebp, runFfmpeg, tempFile } = require('../lib/sticker');
+const REMOVEBG_KEY = process.env.REMOVEBG_KEY || 'qrRRJAy3mMM77UEWtUkqrjC6';
+const { createSticker, textSticker, isAnimatedWebp, animatedWebpToMp4, runFfmpeg, tempFile } = require('../lib/sticker');
 
 const CAPTION = '𝗖𝗼𝗻𝘃𝗲𝗿𝘁𝗲𝗱 𝗯𝘆 𝗧𝗘𝗦𝗟𝗔-𝗠𝗗';
 
@@ -30,7 +30,7 @@ module.exports = [
 
   {
     command: ['hacker2'],
-    aliases: ['hacker'],
+    aliases: ['hackerr'],
     description: 'Apply a green hacker-terminal effect to a quoted image',
     category: 'media',
     handler: async (client, m, { mime, qmsg }) => {
@@ -89,7 +89,7 @@ module.exports = [
 
   {
     command: ['remini'],
-    aliases: [],
+    aliases: ['hd'],
     description: 'Enhance a quoted image',
     category: 'media',
     handler: async (client, m, { command, mime, prefix, quoted, reply }) => {
@@ -119,12 +119,12 @@ module.exports = [
         file = await client.downloadAndSaveMediaMessage(m.quoted);
         m.reply('𝗔 𝗺𝗼𝗺𝗲𝗻𝘁, 𝗧𝗘𝗦𝗟𝗔-𝗠𝗗 𝗶𝘀 𝗲𝗿𝗮𝘀𝗶𝗻𝗴 𝘁𝗵𝗲 𝗯𝗮𝗰𝗸𝗴𝗿𝗼𝘂𝗻𝗱. . .');
         let image;
-        if (process.env.REMOVEBG_KEY) {
+        if (REMOVEBG_KEY) {
           const form = new FormData();
           form.append('image_file', fs.createReadStream(file));
           form.append('size', 'auto');
           const response = await axios.post('https://api.remove.bg/v1.0/removebg', form, {
-            headers: { ...form.getHeaders(), 'X-Api-Key': process.env.REMOVEBG_KEY.trim() },
+            headers: { ...form.getHeaders(), 'X-Api-Key': REMOVEBG_KEY.trim() },
             responseType: 'arraybuffer',
             timeout: 60000,
             validateStatus: () => true,
@@ -154,8 +154,8 @@ module.exports = [
   },
 
   {
-    command: ['s'],
-    aliases: ['sticker'],
+    command: ['sticker'],
+    aliases: ['s'],
     description: 'Create a sticker from an image or short video (add "crop" to fill the square)',
     category: 'media',
     handler: async (client, m, { author, msgDreaded, packname, text }) => {
@@ -183,7 +183,7 @@ module.exports = [
 
   {
     command: ['smeme'],
-    aliases: [],
+    aliases: ['write'],
     description: 'Create a meme sticker from top|bottom text',
     category: 'media',
     handler: async (client, m, { author, mime, packname, qmsg, reply, text }) => {
@@ -209,7 +209,7 @@ module.exports = [
 
   {
     command: ['take'],
-    aliases: [],
+    aliases: ['steal'],
     description: 'Change the watermark of a sticker (take pack|author)',
     category: 'media',
     handler: async (client, m, { msgDreaded, pushname, text }) => {
@@ -237,7 +237,7 @@ module.exports = [
 
   {
     command: ['toimage'],
-    aliases: ['photo'],
+    aliases: ['photo', 'toimg'],
     description: 'Convert a sticker to an image',
     category: 'media',
     handler: async (client, m, { command, mime, prefix, quoted }) => {
@@ -271,9 +271,8 @@ module.exports = [
       try {
         input = await client.downloadAndSaveMediaMessage(quoted);
         if (isAnimatedWebp(fs.readFileSync(input))) {
-          const converted = await webp2mp4File(input);
-          if (!converted || !converted.result || /undefined/.test(converted.result)) throw new Error('the converter returned no video');
-          await client.sendMessage(m.chat, { video: { url: converted.result }, caption: CAPTION }, { quoted: m });
+          const video = await animatedWebpToMp4(fs.readFileSync(input));
+          await client.sendMessage(m.chat, { video, caption: CAPTION, gifPlayback: true }, { quoted: m });
         } else {
           await runFfmpeg(['-y', '-loop', '1', '-i', input, '-t', '3', '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p', '-movflags', '+faststart', output]);
           await client.sendMessage(m.chat, { video: fs.readFileSync(output), caption: CAPTION }, { quoted: m });
