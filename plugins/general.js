@@ -74,7 +74,7 @@ function botVersion() {
   }
 }
 
-const REPO_URL = (process.env.REPO_URL || 'https://github.com/ignatiusmkuu-spec/Perez').replace(/\/+$/, '').replace(/\.git$/, '');
+const REPO_URL = (process.env.REPO_URL || 'https://github.com/ignatiusmkuu-spec/Tesla-bot').replace(/\/+$/, '').replace(/\.git$/, '');
 
 function ago(iso) {
   const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
