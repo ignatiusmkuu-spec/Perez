@@ -1,7 +1,7 @@
 
 const fs = require('fs');
 const handler = require('../lib/handler');
-const { generateWAMessageFromContent, prepareWAMessageMedia, proto } = require('@whiskeysockets/baileys');
+const { generateWAMessageFromContent, proto } = require('@whiskeysockets/baileys');
 
 const REPO_URL = process.env.REPO_URL || 'https://github.com/ignatiusmkuu-spec/Perez';
 const REPO_BUTTON = process.env.REPO_BUTTON || 'Repository';
@@ -74,30 +74,29 @@ function buildMenu({ botname, greeting, pushname, prefix, uptime, dreadedspeed }
   return { menu, total };
 }
 
-async function sendWithButton(client, chat, quoted, { text, footer, media }) {
-  const button = {
-    name: 'cta_url',
-    buttonParamsJson: JSON.stringify({ display_text: REPO_BUTTON, url: REPO_URL, merchant_url: REPO_URL }),
-  };
-  let header = { hasMediaAttachment: false };
-  if (media) {
-    const prepared = await prepareWAMessageMedia(media, { upload: client.waUploadToServer });
-    header = { hasMediaAttachment: true, ...prepared };
-  }
-  const message = generateWAMessageFromContent(chat, {
-    viewOnceMessage: {
-      message: {
-        messageContextInfo: { deviceListMetadata: {}, deviceListMetadataVersion: 2 },
-        interactiveMessage: proto.Message.InteractiveMessage.create({
-          header: proto.Message.InteractiveMessage.Header.create(header),
-          body: proto.Message.InteractiveMessage.Body.create({ text }),
-          footer: proto.Message.InteractiveMessage.Footer.create({ text: footer }),
-          nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({ buttons: [button] }),
-        }),
+async function sendRepoButton(client, chat, quoted, botname) {
+  try {
+    const button = {
+      name: 'cta_url',
+      buttonParamsJson: JSON.stringify({ display_text: REPO_BUTTON, url: REPO_URL, merchant_url: REPO_URL }),
+    };
+    const message = generateWAMessageFromContent(chat, {
+      viewOnceMessage: {
+        message: {
+          messageContextInfo: { deviceListMetadata: {}, deviceListMetadataVersion: 2 },
+          interactiveMessage: proto.Message.InteractiveMessage.create({
+            header: proto.Message.InteractiveMessage.Header.create({ hasMediaAttachment: false }),
+            body: proto.Message.InteractiveMessage.Body.create({ text: `${botname} source code` }),
+            footer: proto.Message.InteractiveMessage.Footer.create({ text: 'A bot beyond the stars' }),
+            nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({ buttons: [button] }),
+          }),
+        },
       },
-    },
-  }, { quoted, userJid: client.user.id });
-  await client.relayMessage(chat, message.message, { messageId: message.key.id });
+    }, { quoted, userJid: client.user.id });
+    await client.relayMessage(chat, message.message, { messageId: message.key.id });
+  } catch (error) {
+    console.error('[menu] repository button failed:', error.message);
+  }
 }
 
 module.exports = [
@@ -120,16 +119,7 @@ module.exports = [
       });
       const shortCaption = `✨ ${toBold(botname)} ✨\n\n👤 ${toBold('User')}  ⟫  ${pushname}\n🔑 ${toBold('Prefix')}  ⟫  [ ${prefix} ]\n📦 ${toBold('Commands')}  ⟫  ${total}`;
 
-      const plain = () => client.sendMessage(chat, { text: `${menu}\n${REPO_BUTTON}: ${REPO_URL}` }, { quoted: m });
-      const sendText = async () => {
-        try {
-          await sendWithButton(client, chat, m, { text: menu, footer: botname });
-        } catch (error) {
-          console.error('[menu] button send failed:', error.message);
-          await plain();
-        }
-      };
-
+      const sendText = () => client.sendMessage(chat, { text: menu }, { quoted: m });
 
       try {
         if (typeof mp3d === 'function') await mp3d();
@@ -139,17 +129,11 @@ module.exports = [
 
       const sendMedia = async (content, shortContent) => {
         try {
-          await sendWithButton(client, chat, m, { text: content.caption, footer: botname, media: content.image ? { image: content.image } : { video: content.video, gifPlayback: true } });
+          await client.sendMessage(chat, content, { quoted: m });
         } catch (error) {
           console.error('[menu] media send failed:', error.message);
-          try {
-            await client.sendMessage(chat, content, { quoted: m });
-            await client.sendMessage(chat, { text: `${REPO_BUTTON}: ${REPO_URL}` }, { quoted: m });
-          } catch (fallbackError) {
-            console.error('[menu] media fallback failed:', fallbackError.message);
-            await client.sendMessage(chat, shortContent, { quoted: m });
-            await sendText();
-          }
+          await client.sendMessage(chat, shortContent, { quoted: m });
+          await sendText();
         }
       };
 
@@ -165,7 +149,7 @@ module.exports = [
           await sendMedia({ image, caption: menu }, { image, caption: shortCaption });
         } else if (type === 'LINK') {
           await client.sendMessage(chat, {
-            text: `${menu}\n${REPO_BUTTON}: ${REPO_URL}`,
+            text: menu,
             contextInfo: {
               externalAdReply: {
                 showAdAttribution: true,
@@ -185,6 +169,8 @@ module.exports = [
         console.error('[menu] send failed:', error);
         await sendText();
       }
+
+      await sendRepoButton(client, chat, m, botname);
     },
   },
 ];
