@@ -63,9 +63,9 @@ function buildMenu({ botname, greeting, pushname, prefix, uptime, dreadedspeed }
   menu += `┗${line}\n\n`;
 
   for (const [category, names] of Object.entries(byCategory)) {
-    menu += `┌──────── 「 ${category.toUpperCase()} 」 ──────┈⊸\n`;
-    for (const name of [...names].sort()) menu += `│ │◦➣ ${name}\n`;
-    menu += `└─────────────────┈⊸\n\n`;
+    menu += `┌────── 「 ${category.toUpperCase()} 」 ───┈⊸\n`;
+    for (const name of [...names].sort()) menu += `│ │○➛ ${name}\n`;
+    menu += `└──────────────┈⊸\n\n`;
   }
 
   menu += `${line}\n`;
