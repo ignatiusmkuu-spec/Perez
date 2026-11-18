@@ -27,8 +27,8 @@ module.exports = [
     aliases: ['setsudo'],
     description: 'Give someone sudo (owner level) access',
     category: 'owner',
-    handler: async (client, m, { MainOwner, NotOwner, reply, text, prefix }) => {
-      if (!MainOwner) throw NotOwner;
+    handler: async (client, m, { Owner, NotOwner, reply, text, prefix }) => {
+      if (!Owner) throw NotOwner;
       const jid = await sudo.resolveTarget(client, m, text);
       if (!jid) return reply(`Tag someone, reply to their message or give a number: ${prefix}addsudo 2547xxxxxxxx`);
 
@@ -46,8 +46,8 @@ module.exports = [
     aliases: ['removesudo', 'rmsudo'],
     description: 'Take sudo access away from someone',
     category: 'owner',
-    handler: async (client, m, { MainOwner, NotOwner, reply, text, prefix }) => {
-      if (!MainOwner) throw NotOwner;
+    handler: async (client, m, { Owner, NotOwner, reply, text, prefix }) => {
+      if (!Owner) throw NotOwner;
       const jid = await sudo.resolveTarget(client, m, text);
       if (!jid) return reply(`Tag someone, reply to their message or give a number: ${prefix}delsudo 2547xxxxxxxx`);
       if (!(await sudo.remove(client, jid))) return reply(`${show(jid)} does not have sudo access.`);
@@ -74,8 +74,8 @@ module.exports = [
     aliases: ['clearsudo', 'delallsudo'],
     description: 'Remove every sudo user at once',
     category: 'owner',
-    handler: async (client, m, { MainOwner, NotOwner, reply }) => {
-      if (!MainOwner) throw NotOwner;
+    handler: async (client, m, { Owner, NotOwner, reply }) => {
+      if (!Owner) throw NotOwner;
       const count = await sudo.clear();
       reply(count ? `Removed ${count} sudo user${count === 1 ? '' : 's'}.` : 'Nobody has sudo access.');
     },
