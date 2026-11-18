@@ -89,7 +89,7 @@ module.exports = [
     description: 'Run JavaScript with the bot context (main owner only)',
     category: 'coding',
     handler: async (client, m, { NotOwner, MainOwner, reply, text, prefix }) => {
-      if (!MainOwner) throw NotOwner;
+      if (!Owner) throw NotOwner;
       if (!text) return reply(`Write the code to run: ${prefix}eval <code>`);
       try {
         let run;
