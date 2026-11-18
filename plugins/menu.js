@@ -3,7 +3,7 @@ const fs = require('fs');
 const handler = require('../lib/handler');
 const { generateWAMessageFromContent, proto } = require('@whiskeysockets/baileys');
 
-const REPO_URL = process.env.REPO_URL || 'https://github.com/ignatiusmkuu-spec/Perez';
+const REPO_URL = process.env.REPO_URL || 'https://github.com/ignatiusmkuu-spec/Tesla-bot';
 const REPO_BUTTON = process.env.REPO_BUTTON || 'Repository';
 
 function toBold(text) {
@@ -63,7 +63,7 @@ function buildMenu({ botname, greeting, pushname, prefix, uptime, dreadedspeed }
   menu += `┗${line}\n\n`;
 
   for (const [category, names] of Object.entries(byCategory)) {
-    menu += `┌────── 「 ${category.toUpperCase()} 」 ───┈⊸\n`;
+    menu += `┌───── 「 ${toBold(category.toUpperCase())} 」 ──┈⊸\n`;
     for (const name of [...names].sort()) menu += `│ │○➛ ${name}\n`;
     menu += `└──────────────┈⊸\n\n`;
   }
