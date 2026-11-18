@@ -9,6 +9,66 @@ const { collectUrls, KEITH_HOSTS } = require('../lib/ytaudio');
 const CAPTION = "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗧𝗘𝗦𝗟𝗔-𝗠𝗗";
 const BROWSER = 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36';
 
+const TIKTOK_LINK = /https?:\/\/(?:[\w-]+\.)?tiktok\.com\/\S+/i;
+
+async function tiktokFromTikwm(link) {
+  const { data } = await axios.get('https://www.tikwm.com/api/', {
+    params: { url: link, hd: 1 },
+    timeout: 30000,
+    headers: { 'User-Agent': BROWSER },
+  });
+  const info = data && data.data;
+  if (!info || (data.code !== undefined && data.code !== 0)) throw new Error((data && data.msg) || 'no data');
+  const video = info.hdplay || info.play || info.wmplay;
+  const images = Array.isArray(info.images) ? info.images : [];
+  if (!video && !images.length) throw new Error('no media');
+  return {
+    video: images.length ? null : video,
+    images,
+    title: info.title,
+    author: info.author && (info.author.nickname || info.author.unique_id),
+    likes: info.digg_count,
+    comments: info.comment_count,
+    shares: info.share_count,
+  };
+}
+
+async function tiktokFromGeneric(url, link) {
+  const { data } = await axios.get(url, { params: { url: link }, timeout: 40000, headers: { 'User-Agent': BROWSER } });
+  const urls = [...new Set(collectUrls(data))].filter((u) => !/\.(jpe?g|png|webp|gif)(\?|$)/i.test(u) && !/\.mp3(\?|$)|music|avatar|cover/i.test(u));
+  urls.sort((a, b) => (/nowm|play|mp4|video|download/i.test(b) ? 1 : 0) - (/nowm|play|mp4|video|download/i.test(a) ? 1 : 0));
+  if (!urls.length) throw new Error('no media in the reply');
+  const body = data && (data.result || data.data || data.BK9 || data);
+  const pick = (...keys) => keys.map((key) => body && body[key]).find((value) => value !== undefined && value !== null);
+  return {
+    video: urls[0],
+    images: [],
+    title: pick('title', 'desc', 'description'),
+    author: pick('author', 'nickname', 'username'),
+  };
+}
+
+async function getTikTok(link) {
+  const providers = [
+    ['tikwm', () => tiktokFromTikwm(link)],
+    ...KEITH_HOSTS.flatMap((host) => ['/download/tiktokdl3', '/download/tiktok'].map((path) => [`keith${path}`, () => tiktokFromGeneric(`${host}${path}`, link)])),
+    ['bk9', () => tiktokFromGeneric('https://api.bk9.dev/download/tiktok', link)],
+    ['tiklydown', () => tiktokFromGeneric('https://api.tiklydown.eu.org/api/download/v3', link)],
+  ];
+  const failures = [];
+  for (const [name, run] of providers) {
+    try {
+      return await run();
+    } catch (error) {
+      failures.push(`${name}: ${error.message || error}`);
+    }
+  }
+  console.error('[TIKTOK] All providers failed:', failures.join(' | '));
+  throw new Error('all providers failed');
+}
+
+const count = (value) => (value === undefined || value === null ? null : Number(value).toLocaleString('en-US'));
+
 async function keithGet(path, link, accept, timeout = 60000) {
   const failures = [];
   for (const host of KEITH_HOSTS) {
@@ -381,70 +441,39 @@ module.exports = [
     },
   },
 
-  {
+    {
     command: ['tiktok'],
-    aliases: ['tikdl'],
+    aliases: ['tikdl', 'tt'],
     description: 'Download a TikTok video',
     category: 'downloads',
-    handler: async (client, m, { text }) => {
-    {
-    const fetch = require("node-fetch");
+    handler: async (client, m, { text, prefix, command }) => {
+      const match = String(text || '').match(TIKTOK_LINK);
+      if (!match) return m.reply(`Send a TikTok link, for example:\n${prefix || '.'}${command || 'tiktok'} https://vm.tiktok.com/xxxx`);
 
-        const fetchTikTokData = async (url, retries = 3) => {
-            for (let attempt = 0; attempt < retries; attempt++) {
-                const data = await fetchJson(url);
-                if (
-                    data &&
-                    data.status === 200 &&
-                    data.tiktok &&
-                    data.tiktok.video &&
-                    data.tiktok.description &&
-                    data.tiktok.author.nickname &&
-                    data.tiktok.statistics.likeCount
-                ) {
-                    return data;
-                }
-            }
-            throw new Error("Failed to fetch valid TikTok data after multiple attempts.");
-        };
+      const react = (emoji) => client.sendMessage(m.chat, { react: { text: emoji, key: m.key } }).catch(() => { });
+      try {
+        await react('⏳');
+        const info = await getTikTok(match[0]);
 
-        try {
-            if (!text) return m.reply("Provide a TikTok link for the video.");
-            if (!text.includes("tiktok.com")) return m.reply("That is not a valid TikTok link.");
+        const lines = [CAPTION];
+        if (info.title) lines.push('', `📌 ${String(info.title).slice(0, 300)}`);
+        if (info.author) lines.push(`👤 ${info.author}`);
+        const stats = [count(info.likes) && `❤️ ${count(info.likes)}`, count(info.comments) && `💬 ${count(info.comments)}`, count(info.shares) && `🔁 ${count(info.shares)}`].filter(Boolean);
+        if (stats.length) lines.push(stats.join('   '));
+        const caption = lines.join('\n');
 
-            const url = `https://api.dreaded.site/api/tiktok?url=${text}`;
-            const data = await fetchTikTokData(url);
-
-            const tikVideoUrl = data.tiktok.video;
-            const tikDescription = data.tiktok.description || "No description available";
-            const tikAuthor = data.tiktok.author.nickname || "Unknown Author";
-            const tikLikes = data.tiktok.statistics.likeCount || "0";
-            const tikComments = data.tiktok.statistics.commentCount || "0";
-            const tikShares = data.tiktok.statistics.shareCount || "0";
-
-            const caption = `🎥 TikTok Video\n\n📌 *Description:* ${tikDescription}\n👤 *Author:* ${tikAuthor}\n❤️ *Likes:* ${tikLikes}\n💬 *Comments:* ${tikComments}\n🔗 *Shares:* ${tikShares}`;
-
-            m.reply(`Data fetched successfully✅ wait a moment. . .`);
-
-            const response = await fetch(tikVideoUrl);
-
-            if (!response.ok) {
-                throw new Error(`Failed to download video: HTTP ${response.status}`);
-            }
-
-            const arrayBuffer = await response.arrayBuffer();
-            const videoBuffer = Buffer.from(arrayBuffer);
-
-            await client.sendMessage(m.chat, {
-                video: videoBuffer,
-                mimetype: "video/mp4",
-                caption: CAPTION,
-            }, { quoted: m });
-
-        } catch (error) {
-            m.reply(`Error: ${error.message}`);
+        if (info.video) {
+          await sendMedia(client, m, 'video', info.video, { caption });
+        } else {
+          for (const [index, image] of info.images.slice(0, 10).entries()) {
+            await client.sendMessage(m.chat, { image: { url: image }, ...(index === 0 ? { caption } : {}) }, { quoted: m });
+          }
         }
-    }
+        await react('✅');
+      } catch (error) {
+        await react('❌');
+        m.reply('❌ Could not download that TikTok. The video may be private or removed, or the download services are busy. Try again in a minute.');
+      }
     },
   },
 
