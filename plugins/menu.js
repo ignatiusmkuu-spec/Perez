@@ -56,10 +56,10 @@ function buildMenu({ botname, greeting, pushname, prefix, uptime, dreadedspeed }
   menu += `╰${line}╯\n\n`;
 
   menu += `┏${line}\n`;
-  menu += `┃ ▪︎▪︎▪︎ ${toBold('User')}  ■■  ${pushname}\n`;
-  menu += `┃ ▪︎▪︎▪︎ ${toBold('Prefix')}  ■■  [ ${prefix} ]\n`;
-  menu += `┃ ▪︎▪︎▪︎ ${toBold('Speed')}  ■■  ${(Number(dreadedspeed) || 0).toFixed(4)} 𝗠𝘀\n`;
-  menu += `┃ ▪︎▪︎▪︎ ${toBold('Commands')}  ■■  ${total}\n`;
+  menu += `┃ ■■ ${toBold('User')}   ○○○  ${pushname}\n`;
+  menu += `┃ ■■ ${toBold('Prefix')}  ○○○  [ ${prefix} ]\n`;
+  menu += `┃ ■■ ${toBold('Speed')}   ○○○  ${(Number(dreadedspeed) || 0).toFixed(4)} 𝗠𝘀\n`;
+  menu += `┃ ■■ ${toBold('Commands')} ○○○  ${total}\n`;
   menu += `┗${line}\n\n`;
 
   for (const [category, names] of Object.entries(byCategory)) {
@@ -68,8 +68,8 @@ function buildMenu({ botname, greeting, pushname, prefix, uptime, dreadedspeed }
     menu += `└──────────────┈⊸\n\n`;
   }
 
-  menu += `${line}\n`;
-  menu += `${toBoldItalic('✨️A bot beyond the stars✨️')}\n`;
+  menu += `╭${line}╮\n`;
+  menu += ` ${toBoldItalic('✨️A bot beyond the stars✨️')}\n`;
   menu += `╰${line}╯`;
   return { menu, total };
 }
