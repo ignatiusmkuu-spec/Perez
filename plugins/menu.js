@@ -1,6 +1,10 @@
 
 const fs = require('fs');
 const handler = require('../lib/handler');
+const { generateWAMessageFromContent, prepareWAMessageMedia, proto } = require('@whiskeysockets/baileys');
+
+const REPO_URL = process.env.REPO_URL || 'https://github.com/ignatiusmkuu-spec/Perez';
+const REPO_BUTTON = process.env.REPO_BUTTON || 'Repository';
 
 function toBold(text) {
   return String(text).split('').map((c) => {
@@ -21,20 +25,7 @@ function toBoldItalic(text) {
   }).join('');
 }
 
-const formatCmd = (name) => toBold(name.charAt(0).toUpperCase() + name.slice(1));
-
-
 const CATEGORY_ORDER = ['settings', 'general', 'group', 'downloads', 'ai', 'media', 'logos', 'tools', 'fun', 'sports', 'coding', 'owner', 'prank'];
-
-const CATEGORY_ICONS = {
-  settings: '⚙️', general: '🌙', group: '👥', downloads: '📥', ai: '🤖', media: '🎆', logos: '🔥',
-  tools: '🔧', fun: '🎉', sports: '⚽️', coding: '🎭', owner: '👑', prank: '☠️', misc: '📦',
-};
-
-const CATEGORY_SYMBOLS = {
-  settings: '●', general: '●', group: '●', downloads: '●', ai: '●', media: '●', logos: '●',
-  tools: '●', fun: '●', sports: '●', coding: '●', owner: '●', prank: '●', misc: '●',
-};
 
 function commandsByCategory() {
   const byCategory = {};
@@ -72,18 +63,41 @@ function buildMenu({ botname, greeting, pushname, prefix, uptime, dreadedspeed }
   menu += `┗${line}\n\n`;
 
   for (const [category, names] of Object.entries(byCategory)) {
-    const icon = CATEGORY_ICONS[category] || '🧭';
-    const symbol = CATEGORY_SYMBOLS[category] || '●';
-    menu += `> ${icon} ${toBold(category.toUpperCase())}\n`;
-    menu += `╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮\n`;
-    for (const name of names) menu += `┃ ${symbol} │  ${formatCmd(name)}\n`;
-    menu += `╰══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╯\n\n`;
+    menu += `┌──────── 「 ${category.toUpperCase()} 」 ──────┈⊸\n`;
+    for (const name of [...names].sort()) menu += `│ │◦➣ ${name}\n`;
+    menu += `└─────────────────┈⊸\n\n`;
   }
 
   menu += `${line}\n`;
   menu += `${toBoldItalic('✨️A bot beyond the stars✨️')}\n`;
   menu += `${line}`;
   return { menu, total };
+}
+
+async function sendWithButton(client, chat, quoted, { text, footer, media }) {
+  const button = {
+    name: 'cta_url',
+    buttonParamsJson: JSON.stringify({ display_text: REPO_BUTTON, url: REPO_URL, merchant_url: REPO_URL }),
+  };
+  let header = { hasMediaAttachment: false };
+  if (media) {
+    const prepared = await prepareWAMessageMedia(media, { upload: client.waUploadToServer });
+    header = { hasMediaAttachment: true, ...prepared };
+  }
+  const message = generateWAMessageFromContent(chat, {
+    viewOnceMessage: {
+      message: {
+        messageContextInfo: { deviceListMetadata: {}, deviceListMetadataVersion: 2 },
+        interactiveMessage: proto.Message.InteractiveMessage.create({
+          header: proto.Message.InteractiveMessage.Header.create(header),
+          body: proto.Message.InteractiveMessage.Body.create({ text }),
+          footer: proto.Message.InteractiveMessage.Footer.create({ text: footer }),
+          nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({ buttons: [button] }),
+        }),
+      },
+    },
+  }, { quoted, userJid: client.user.id });
+  await client.relayMessage(chat, message.message, { messageId: message.key.id });
 }
 
 module.exports = [
@@ -106,7 +120,15 @@ module.exports = [
       });
       const shortCaption = `✨ ${toBold(botname)} ✨\n\n👤 ${toBold('User')}  ⟫  ${pushname}\n🔑 ${toBold('Prefix')}  ⟫  [ ${prefix} ]\n📦 ${toBold('Commands')}  ⟫  ${total}`;
 
-      const sendText = () => client.sendMessage(chat, { text: menu }, { quoted: m });
+      const plain = () => client.sendMessage(chat, { text: `${menu}\n${REPO_BUTTON}: ${REPO_URL}` }, { quoted: m });
+      const sendText = async () => {
+        try {
+          await sendWithButton(client, chat, m, { text: menu, footer: botname });
+        } catch (error) {
+          console.error('[menu] button send failed:', error.message);
+          await plain();
+        }
+      };
 
 
       try {
@@ -117,11 +139,17 @@ module.exports = [
 
       const sendMedia = async (content, shortContent) => {
         try {
-          await client.sendMessage(chat, content, { quoted: m });
+          await sendWithButton(client, chat, m, { text: content.caption, footer: botname, media: content.image ? { image: content.image } : { video: content.video, gifPlayback: true } });
         } catch (error) {
           console.error('[menu] media send failed:', error.message);
-          await client.sendMessage(chat, shortContent, { quoted: m });
-          await sendText();
+          try {
+            await client.sendMessage(chat, content, { quoted: m });
+            await client.sendMessage(chat, { text: `${REPO_BUTTON}: ${REPO_URL}` }, { quoted: m });
+          } catch (fallbackError) {
+            console.error('[menu] media fallback failed:', fallbackError.message);
+            await client.sendMessage(chat, shortContent, { quoted: m });
+            await sendText();
+          }
         }
       };
 
@@ -137,7 +165,7 @@ module.exports = [
           await sendMedia({ image, caption: menu }, { image, caption: shortCaption });
         } else if (type === 'LINK') {
           await client.sendMessage(chat, {
-            text: menu,
+            text: `${menu}\n${REPO_BUTTON}: ${REPO_URL}`,
             contextInfo: {
               externalAdReply: {
                 showAdAttribution: true,
