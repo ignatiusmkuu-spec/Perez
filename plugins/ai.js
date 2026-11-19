@@ -2,7 +2,13 @@ const fs = require('fs');
 const axios = require('axios');
 const { fetchJson } = require('../lib/dreadfunc');
 
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_DIRECT = 'https://api.groq.com/openai/v1';
+const PROXY_URL = (process.env.AI_PROXY_URL || 'https://api-4lqo.onrender.com').replace(/\/+$/, '');
+let botId = '';
+
+const rememberBot = (client) => {
+  botId = String((client.user && client.user.id) || '').split(':')[0].split('@')[0];
+};
 const TEXT_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
 const wormgptSessions = new Map();
@@ -34,16 +40,17 @@ const PREFERRED = [
 const NOT_CHAT = /whisper|orpheus|guard|safeguard|compound|tts|embed/i;
 let available = null;
 
-function groqKey() {
-  const key = process.env.GROQ_KEY || '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';
-  if (!key) throw new Error('GROQ_KEY is not set');
-  return key.trim();
+async function route(path) {
+  const key = (process.env.GROQ_KEY || '').trim();
+  if (key) return { url: `${GROQ_DIRECT}${path}`, headers: { Authorization: `Bearer ${key}` } };
+  return { url: `${PROXY_URL}/openai/v1${path}`, headers: { 'x-bot-id': botId } };
 }
 
 async function listModels() {
   if (available) return available;
-  const response = await axios.get(GROQ_URL.replace('/chat/completions', '/models'), {
-    headers: { Authorization: `Bearer ${groqKey()}` },
+  const target = await route('/models');
+  const response = await axios.get(target.url, {
+    headers: target.headers,
     timeout: 30000,
     validateStatus: () => true,
   });
@@ -55,11 +62,12 @@ async function listModels() {
 }
 
 async function post(messages, model) {
+  const target = await route('/chat/completions');
   return axios.post(
-    GROQ_URL,
+    target.url,
     { model, messages, temperature: 0.7, max_completion_tokens: 1500 },
     {
-      headers: { Authorization: `Bearer ${groqKey()}`, 'Content-Type': 'application/json' },
+      headers: { ...target.headers, 'Content-Type': 'application/json' },
       timeout: 60000,
       validateStatus: () => true,
     }
@@ -83,7 +91,7 @@ async function groq(messages, model) {
     response = await post(messages, pick);
   }
   if (response.status === 401) throw new Error('Groq rejected the API key');
-  if (response.status === 429) throw new Error('Groq rate limit reached, try again in a moment');
+  if (response.status === 429) throw new Error('Too many AI requests right now, try again in a moment');
   if (response.status < 200 || response.status >= 300) {
     const detail = response.data && response.data.error && response.data.error.message;
     throw new Error(detail || `Groq returned HTTP ${response.status}`);
@@ -96,7 +104,7 @@ async function groq(messages, model) {
 const VISION_HINT = /llama-4|vision|vl\b|scout|maverick|qwen3\.[5-9]/i;
 
 async function geminiVision(prompt, base64, type) {
-  const key = process.env.GEMINI_KEY;
+  const key = (process.env.GEMINI_KEY || '').trim();
   if (!key) return null;
   const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
   const response = await axios.post(
@@ -154,6 +162,7 @@ function chatCommand(command, description, greeting, model, persona) {
     description,
     category: 'ai',
     handler: async (client, m, { text }) => {
+      rememberBot(client);
       if (!text) return m.reply(greeting);
       try {
         const messages = [];
@@ -174,6 +183,7 @@ function visionCommand(command, description) {
     description,
     category: 'ai',
     handler: async (client, m, { mime, text }) => {
+      rememberBot(client);
       let file;
       try {
         if (!m.quoted) return m.reply('Quote an image with the instructions.');
